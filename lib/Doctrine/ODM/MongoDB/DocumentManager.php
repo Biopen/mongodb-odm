@@ -145,7 +145,14 @@ class DocumentManager implements ObjectManager
     protected function __construct(Connection $conn = null, Configuration $config = null, EventManager $eventManager = null)
     {
         $this->config = $config ?: new Configuration();
-        $dbName = isset($_SERVER["HTTP_HOST"]) ? explode('.', $_SERVER["HTTP_HOST"])[0] : 'gogocarto_default';
+        // default database Name
+        $dbName = 'gogocarto_default';
+        if (isset($_SERVER["HTTP_HOST"]))
+        {
+            $exploded = explode('.', $_SERVER["HTTP_HOST"]);
+            $subdomain = $exploded[0];
+            if (count($exploded) == 3 && !in_array($subdomain, ['dev', 'name', 'demo'])) $dbName = $subdomain;
+        }
         $this->config->setDefaultDB($dbName);
         
         $this->eventManager = $eventManager ?: new EventManager();
