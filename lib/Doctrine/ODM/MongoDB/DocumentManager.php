@@ -151,7 +151,7 @@ class DocumentManager implements ObjectManager
         {
             $exploded = explode('.', $_SERVER["HTTP_HOST"]);
             $subdomain = $exploded[0];
-            if (count($exploded) == 3 && !in_array($subdomain, ['dev', 'name', 'demo'])) $dbName = $subdomain;
+            if (count($exploded) == 3 && !in_array($subdomain, ['dev', 'test', 'demo', 'carto', 'carto-dev'])) $dbName = $subdomain;
         }
         $this->config->setDefaultDB($dbName);
         
