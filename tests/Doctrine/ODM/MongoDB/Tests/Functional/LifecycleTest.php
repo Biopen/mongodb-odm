@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
-use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
 class LifecycleTest extends BaseTest
 {
@@ -13,21 +15,21 @@ class LifecycleTest extends BaseTest
         $this->dm->persist($parent);
         $this->dm->flush();
 
-        $this->assertEquals(1, count($parent->getChildren()));
+        $this->assertCount(1, $parent->getChildren());
 
         $parent->setName('parent #changed');
 
         $this->dm->flush();
         $this->dm->flush();
 
-        $this->assertEquals(1, count($parent->getChildren()));
+        $this->assertCount(1, $parent->getChildren());
 
         $this->dm->clear();
 
-        $parent = $this->dm->getRepository(__NAMESPACE__.'\ParentObject')->find($parent->getId());
+        $parent = $this->dm->getRepository(ParentObject::class)->find($parent->getId());
         $this->assertNotNull($parent);
         $this->assertEquals('parent #changed', $parent->getName());
-        $this->assertEquals(1, count($parent->getChildren()));
+        $this->assertCount(1, $parent->getChildren());
         $this->assertEquals('changed', $parent->getChildEmbedded()->getName());
     }
 
@@ -43,9 +45,9 @@ class LifecycleTest extends BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $parent = $this->dm->getRepository(__NAMESPACE__.'\ParentObject')->find($parent->getId());
+        $parent = $this->dm->getRepository(ParentObject::class)->find($parent->getId());
         $this->assertNotNull($parent);
-        $this->assertEquals(1, count($parent->getChildren()));
+        $this->assertCount(1, $parent->getChildren());
     }
 }
 
@@ -55,13 +57,13 @@ class ParentObject
     /** @ODM\Id */
     private $id;
 
-    /** @ODM\ReferenceMany(targetDocument="ChildObject", cascade="all") */
+    /** @ODM\ReferenceMany(targetDocument=ChildObject::class, cascade="all") */
     private $children;
 
     /** @ODM\Field(type="string") */
     private $name;
 
-    /** @ODM\EmbedOne(targetDocument="ChildEmbeddedObject") */
+    /** @ODM\EmbedOne(targetDocument=ChildEmbeddedObject::class) */
     private $childEmbedded;
 
     private $child;
@@ -86,7 +88,7 @@ class ParentObject
     /** @ODM\PrePersist @ODM\PreUpdate */
     public function prePersistPreUpdate()
     {
-        $this->children = array($this->child);
+        $this->children = [$this->child];
     }
 
     /** @ODM\PreUpdate */

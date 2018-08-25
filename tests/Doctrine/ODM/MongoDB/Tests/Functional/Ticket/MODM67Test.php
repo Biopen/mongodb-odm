@@ -1,24 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
-use Doctrine\ODM\MongoDB\Events;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Event\LifecycleEventArgs;
+use Doctrine\ODM\MongoDB\Events;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class MODM67Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class MODM67Test extends BaseTest
 {
     private function getDocumentManager()
     {
         $this->listener = new MODM67TestEventListener($this->dm);
         $evm = $this->dm->getEventManager();
-        $events = array(
+        $events = [
             Events::prePersist,
             Events::postPersist,
             Events::preUpdate,
             Events::postUpdate,
-        );
+        ];
         $evm->addEventListener($events, $this->listener);
 
         return $this->dm;
@@ -42,7 +45,7 @@ class MODM67Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $dm->clear();
 
-        $testDoc = $dm->find(__NAMESPACE__ . '\MODM67DerivedClass', $testDoc->id);
+        $testDoc = $dm->find(MODM67DerivedClass::class, $testDoc->id);
         $testDoc->embedOne->numAccesses = 1;
         $dm->flush();
 
@@ -63,33 +66,41 @@ class MODM67TestEventListener
     public function prePersist(LifecycleEventArgs $eventArgs)
     {
         $document = $eventArgs->getDocument();
-        if ($document instanceof MODM67EmbeddedObject) {
-            $document->prePersist = true;
+        if (! ($document instanceof MODM67EmbeddedObject)) {
+            return;
         }
+
+        $document->prePersist = true;
     }
 
     public function postPersist(LifecycleEventArgs $eventArgs)
     {
         $document = $eventArgs->getDocument();
-        if ($document instanceof MODM67EmbeddedObject) {
-            $document->postPersist = true;
+        if (! ($document instanceof MODM67EmbeddedObject)) {
+            return;
         }
+
+        $document->postPersist = true;
     }
 
     public function preUpdate(LifecycleEventArgs $eventArgs)
     {
         $document = $eventArgs->getDocument();
-        if ($document instanceof MODM67EmbeddedObject) {
-            $document->preUpdate = true;
+        if (! ($document instanceof MODM67EmbeddedObject)) {
+            return;
         }
+
+        $document->preUpdate = true;
     }
 
     public function postUpdate(LifecycleEventArgs $eventArgs)
     {
         $document = $eventArgs->getDocument();
-        if ($document instanceof MODM67EmbeddedObject) {
-            $document->postUpdate = true;
+        if (! ($document instanceof MODM67EmbeddedObject)) {
+            return;
         }
+
+        $document->postUpdate = true;
     }
 }
 
@@ -101,7 +112,7 @@ class MODM67DerivedClass
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedOne(targetDocument="MODM67EmbeddedObject") */
+    /** @ODM\EmbedOne(targetDocument=MODM67EmbeddedObject::class) */
     public $embedOne;
 }
 

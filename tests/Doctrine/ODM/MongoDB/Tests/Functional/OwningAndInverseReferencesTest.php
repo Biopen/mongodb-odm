@@ -1,10 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use DateTime;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Documents\BlogPost;
+use Documents\BrowseNode;
+use Documents\Cart;
+use Documents\Comment;
+use Documents\Customer;
+use Documents\Feature;
+use Documents\FriendUser;
+use Documents\Product;
+use Documents\Tag;
+use function get_class;
+use function strtotime;
 
-class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class OwningAndInverseReferencesTest extends BaseTest
 {
     public function testOneToOne()
     {
@@ -16,9 +30,9 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
         // if inversedBy then isOwningSide
         // if mappedBy then isInverseSide
 
-        $customer = new \Documents\Customer;
+        $customer = new Customer();
         $customer->name = 'Jon Wage';
-        $customer->cart = new \Documents\Cart;
+        $customer->cart = new Cart();
         $customer->cart->numItems = 5;
         $customer->cart->customer = $customer;
         $customer->cartTest = 'test';
@@ -27,12 +41,12 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
         $this->dm->flush();
         $this->dm->clear();
 
-        $customer = $this->dm->getRepository('Documents\Customer')->find($customer->id);
-        $this->assertInstanceOf('Documents\Cart', $customer->cart);
+        $customer = $this->dm->getRepository(Customer::class)->find($customer->id);
+        $this->assertInstanceOf(Cart::class, $customer->cart);
         $this->assertEquals($customer->cart->id, $customer->cart->id);
 
         $check = $this->dm->getDocumentCollection(get_class($customer))->findOne();
-        $this->assertTrue(isset($check['cart']));
+        $this->assertArrayHasKey('cart', $check);
         $this->assertEquals('test', $check['cart']);
 
         $customer->cart = null;
@@ -41,72 +55,72 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
         $this->dm->clear();
 
         $check = $this->dm->getDocumentCollection(get_class($customer))->findOne();
-        $this->assertTrue(isset($check['cart']));
+        $this->assertArrayHasKey('cart', $check);
         $this->assertEquals('ok', $check['cart']);
 
-        $customer = $this->dm->getRepository('Documents\Customer')->find($customer->id);
-        $this->assertInstanceOf('Documents\Cart', $customer->cart);
+        $customer = $this->dm->getRepository(Customer::class)->find($customer->id);
+        $this->assertInstanceOf(Cart::class, $customer->cart);
         $this->assertEquals('ok', $customer->cartTest);
     }
 
     public function testOneToManyBiDirectional()
     {
-        $product = new \Documents\Product('Book');
-        $product->addFeature(new \Documents\Feature('Pages'));
-        $product->addFeature(new \Documents\Feature('Cover'));
+        $product = new Product('Book');
+        $product->addFeature(new Feature('Pages'));
+        $product->addFeature(new Feature('Cover'));
         $this->dm->persist($product);
         $this->dm->flush();
         $this->dm->clear();
 
         $check = $this->dm->getDocumentCollection(get_class($product))->findOne();
-        $this->assertFalse(isset($check['tags']));
+        $this->assertArrayNotHasKey('tags', $check);
 
-        $check = $this->dm->getDocumentCollection('Documents\Feature')->findOne();
-        $this->assertTrue(isset($check['product']));
+        $check = $this->dm->getDocumentCollection(Feature::class)->findOne();
+        $this->assertArrayHasKey('product', $check);
 
         $product = $this->dm->createQueryBuilder(get_class($product))
             ->getQuery()
             ->getSingleResult();
         $features = $product->features;
-        $this->assertEquals(2, count($features));
+        $this->assertCount(2, $features);
         $this->assertEquals('Pages', $features[0]->name);
         $this->assertEquals('Cover', $features[1]->name);
     }
 
     public function testOneToManySelfReferencing()
     {
-        $node = new \Documents\BrowseNode('Root');
-        $node->addChild(new \Documents\BrowseNode('Child 1'));
-        $node->addChild(new \Documents\BrowseNode('Child 2'));
+        $node = new BrowseNode('Root');
+        $node->addChild(new BrowseNode('Child 1'));
+        $node->addChild(new BrowseNode('Child 2'));
 
         $this->dm->persist($node);
         $this->dm->flush();
         $this->dm->clear();
 
-        $check = $this->dm->getDocumentCollection(get_class($node))->findOne(array('parent' => array('$exists' => false)));
+        $check = $this->dm->getDocumentCollection(get_class($node))->findOne(['parent' => ['$exists' => false]]);
         $this->assertNotNull($check);
-        $this->assertFalse(isset($check['children']));
+        $this->assertArrayNotHasKey('children', $check);
 
         $root = $this->dm->createQueryBuilder(get_class($node))
             ->field('children')->exists(false)
             ->getQuery()
             ->getSingleResult();
-        $this->assertInstanceOf('Documents\BrowseNode', $root);
-        $this->assertEquals(2, count($root->children));
+        $this->assertInstanceOf(BrowseNode::class, $root);
+        $this->assertCount(2, $root->children);
 
         unset($root->children[0]);
         $this->dm->flush();
 
-        $this->assertEquals(1, count($root->children));
+        $this->assertCount(1, $root->children);
 
         $this->dm->refresh($root);
-        $this->assertEquals(2, count($root->children));
+        $this->assertCount(2, $root->children);
     }
 
     public function testManyToMany()
     {
-        $baseballTag = new \Documents\Tag('baseball');
-        $blogPost = new \Documents\BlogPost();
+        $baseballTag = new Tag('baseball');
+        $blogPost = new BlogPost();
         $blogPost->name = 'Test';
         $blogPost->addTag($baseballTag);
 
@@ -115,19 +129,19 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
         $this->dm->clear();
 
         $check = $this->dm->getDocumentCollection(get_class($blogPost))->findOne();
-        $this->assertEquals(1, count($check['tags']));
+        $this->assertCount(1, $check['tags']);
 
-        $check = $this->dm->getDocumentCollection('Documents\Tag')->findOne();
-        $this->assertFalse(isset($check['blogPosts']));
+        $check = $this->dm->getDocumentCollection(Tag::class)->findOne();
+        $this->assertArrayNotHasKey('blogPosts', $check);
 
-        $blogPost = $this->dm->createQueryBuilder('Documents\BlogPost')
+        $blogPost = $this->dm->createQueryBuilder(BlogPost::class)
             ->getQuery()
             ->getSingleResult();
-        $this->assertEquals(1, count($blogPost->tags));
+        $this->assertCount(1, $blogPost->tags);
 
         $this->dm->clear();
 
-        $tag = $this->dm->createQueryBuilder('Documents\Tag')
+        $tag = $this->dm->createQueryBuilder(Tag::class)
             ->getQuery()
             ->getSingleResult();
         $this->assertEquals('baseball', $tag->name);
@@ -137,10 +151,10 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
 
     public function testManyToManySelfReferencing()
     {
-        $jwage = new \Documents\FriendUser('jwage');
-        $fabpot = new \Documents\FriendUser('fabpot');
+        $jwage = new FriendUser('jwage');
+        $fabpot = new FriendUser('fabpot');
         $fabpot->addFriend($jwage);
-        $romanb = new \Documents\FriendUser('romanb');
+        $romanb = new FriendUser('romanb');
         $romanb->addFriend($jwage);
         $jwage->addFriend($fabpot);
         $jwage->addFriend($romanb);
@@ -151,43 +165,43 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
         $this->dm->flush();
         $this->dm->clear();
 
-        $check = $this->dm->createQueryBuilder('Documents\FriendUser')
+        $check = $this->dm->createQueryBuilder(FriendUser::class)
             ->field('name')->equals('fabpot')
             ->hydrate(false)
             ->getQuery()
             ->getSingleResult();
-        $this->assertFalse(isset($check['friendsWithMe']));
+        $this->assertArrayNotHasKey('friendsWithMe', $check);
 
-        $user = $this->dm->createQueryBuilder('Documents\FriendUser')
+        $user = $this->dm->createQueryBuilder(FriendUser::class)
             ->field('name')->equals('fabpot')
             ->getQuery()
             ->getSingleResult();
 
-        $this->assertEquals(1, count($user->friendsWithMe));
+        $this->assertCount(1, $user->friendsWithMe);
         $this->assertEquals('jwage', $user->friendsWithMe[0]->name);
 
         $this->dm->clear();
 
-        $user = $this->dm->createQueryBuilder('Documents\FriendUser')
+        $user = $this->dm->createQueryBuilder(FriendUser::class)
             ->field('name')->equals('romanb')
             ->getQuery()
             ->getSingleResult();
 
-        $this->assertEquals(1, count($user->friendsWithMe));
+        $this->assertCount(1, $user->friendsWithMe);
         $this->assertEquals('jwage', $user->friendsWithMe[0]->name);
 
         $this->dm->clear();
 
-        $user = $this->dm->createQueryBuilder('Documents\FriendUser')
+        $user = $this->dm->createQueryBuilder(FriendUser::class)
             ->field('name')->equals('jwage')
             ->getQuery()
             ->getSingleResult();
 
-        $this->assertEquals(2, count($user->myFriends));
+        $this->assertCount(2, $user->myFriends);
         $this->assertEquals('fabpot', $user->myFriends[0]->name);
         $this->assertEquals('romanb', $user->myFriends[1]->name);
 
-        $this->assertEquals(2, count($user->friendsWithMe));
+        $this->assertCount(2, $user->friendsWithMe);
         $this->assertEquals('fabpot', $user->friendsWithMe[0]->name);
         $this->assertEquals('romanb', $user->friendsWithMe[1]->name);
 
@@ -202,15 +216,15 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
         $date2 = new DateTime();
         $date2->setTimestamp(strtotime('-10 seconds'));
 
-        $blogPost = new \Documents\BlogPost('Test');
-        $blogPost->addComment(new \Documents\Comment('Comment 1', $date1));
-        $blogPost->addComment(new \Documents\Comment('Comment 2', $date2));
+        $blogPost = new BlogPost('Test');
+        $blogPost->addComment(new Comment('Comment 1', $date1));
+        $blogPost->addComment(new Comment('Comment 2', $date2));
 
         $this->dm->persist($blogPost);
         $this->dm->flush();
         $this->dm->clear();
 
-        $blogPost = $this->dm->createQueryBuilder('Documents\BlogPost')
+        $blogPost = $this->dm->createQueryBuilder(BlogPost::class)
             ->getQuery()
             ->getSingleResult();
         $this->assertEquals('Comment 1', $blogPost->comments[0]->text);
@@ -220,38 +234,38 @@ class OwningAndInverseReferencedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTes
 
         $this->dm->clear();
 
-        $comment = $this->dm->createQueryBuilder('Documents\Comment')
+        $comment = $this->dm->createQueryBuilder(Comment::class)
             ->getQuery()
             ->getSingleResult();
         $this->assertEquals('Test', $comment->parent->getName());
 
         $this->dm->clear();
 
-        $blogPost = $this->dm->createQueryBuilder('Documents\BlogPost')
+        $blogPost = $this->dm->createQueryBuilder(BlogPost::class)
             ->getQuery()
             ->getSingleResult();
         $this->assertEquals('Comment 1', $blogPost->firstComment->getText());
         $this->assertEquals('Comment 2', $blogPost->latestComment->getText());
-        $this->assertEquals(2, count($blogPost->last5Comments));
+        $this->assertCount(2, $blogPost->last5Comments);
 
         $this->assertEquals('Comment 2', $blogPost->last5Comments[0]->getText());
         $this->assertEquals('Comment 1', $blogPost->last5Comments[1]->getText());
 
         $this->dm->clear();
 
-        $blogPost = $this->dm->createQueryBuilder('Documents\BlogPost')
+        $blogPost = $this->dm->createQueryBuilder(BlogPost::class)
             ->getQuery()
             ->getSingleResult();
 
-        $blogPost->addComment(new \Documents\Comment('Comment 3 by admin', $date1, true));
-        $blogPost->addComment(new \Documents\Comment('Comment 4 by admin', $date2, true));
+        $blogPost->addComment(new Comment('Comment 3 by admin', $date1, true));
+        $blogPost->addComment(new Comment('Comment 4 by admin', $date2, true));
         $this->dm->flush();
         $this->dm->clear();
 
-        $blogPost = $this->dm->createQueryBuilder('Documents\BlogPost')
+        $blogPost = $this->dm->createQueryBuilder(BlogPost::class)
             ->getQuery()
             ->getSingleResult();
-        $this->assertEquals(2, count($blogPost->adminComments));
+        $this->assertCount(2, $blogPost->adminComments);
         $this->assertEquals('Comment 4 by admin', $blogPost->adminComments[0]->getText());
         $this->assertEquals('Comment 3 by admin', $blogPost->adminComments[1]->getText());
     }

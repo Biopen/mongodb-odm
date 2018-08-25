@@ -1,14 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use MongoDB\BSON\ObjectId;
 
 class GH611Test extends BaseTest
 {
     public function testPreparationofEmbeddedDocumentValues()
     {
-        $documentId = (string) (new \MongoId());
+        $documentId = (string) (new ObjectId());
 
         $document = new GH611Document();
         $document->id = $documentId;
@@ -18,7 +21,7 @@ class GH611Test extends BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__ . '\GH611Document', $documentId);
+        $document = $this->dm->find(GH611Document::class, $documentId);
 
         $this->assertSame($documentId, $document->id);
         $this->assertSame(1, $document->embedded->id);
@@ -29,7 +32,7 @@ class GH611Test extends BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__ . '\GH611Document', $documentId);
+        $document = $this->dm->find(GH611Document::class, $documentId);
 
         $this->assertSame($documentId, $document->id);
         $this->assertSame(2, $document->embedded->id);
@@ -39,15 +42,15 @@ class GH611Test extends BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__ . '\GH611Document', $documentId);
+        $document = $this->dm->find(GH611Document::class, $documentId);
 
         $this->assertSame($documentId, $document->id);
         $this->assertSame(3, $document->embedded->id);
         $this->assertSame('b', $document->embedded->name);
 
         // Update the embedded document's ID field via query builder
-        $query = $this->dm->createQueryBuilder(__NAMESPACE__ . '\GH611Document')
-            ->update()
+        $query = $this->dm->createQueryBuilder(GH611Document::class)
+            ->updateOne()
             ->field('id')->equals($documentId)
             ->field('embedded._id')->exists(false)
             ->field('embedded.id')->set(4)
@@ -56,49 +59,49 @@ class GH611Test extends BaseTest
 
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__ . '\GH611Document', $documentId);
+        $document = $this->dm->find(GH611Document::class, $documentId);
 
         $this->assertSame($documentId, $document->id);
         $this->assertSame(4, $document->embedded->id);
         $this->assertSame('b', $document->embedded->name);
 
         // Update the entire embedded document with an array via query builder
-        $query = $this->dm->createQueryBuilder(__NAMESPACE__ . '\GH611Document')
-            ->update()
+        $query = $this->dm->createQueryBuilder(GH611Document::class)
+            ->updateOne()
             ->field('id')->equals($documentId)
             ->field('embedded._id')->exists(false)
-            ->field('embedded')->set(array('id' => 5, 'n' => 'c'))
+            ->field('embedded')->set(['id' => 5, 'n' => 'c'])
             ->getQuery()
             ->execute();
 
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__ . '\GH611Document', $documentId);
+        $document = $this->dm->find(GH611Document::class, $documentId);
 
         $this->assertSame($documentId, $document->id);
         $this->assertSame(5, $document->embedded->id);
         $this->assertSame('c', $document->embedded->name);
 
         // Update the entire embedded document with an unmapped object via query builder
-        $query = $this->dm->createQueryBuilder(__NAMESPACE__ . '\GH611Document')
-            ->update()
+        $query = $this->dm->createQueryBuilder(GH611Document::class)
+            ->updateOne()
             ->field('id')->equals($documentId)
             ->field('embedded._id')->exists(false)
-            ->field('embedded')->set((object) array('id' => 6, 'n' => 'd'))
+            ->field('embedded')->set((object) ['id' => 6, 'n' => 'd'])
             ->getQuery()
             ->execute();
 
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__ . '\GH611Document', $documentId);
+        $document = $this->dm->find(GH611Document::class, $documentId);
 
         $this->assertSame($documentId, $document->id);
         $this->assertSame(6, $document->embedded->id);
         $this->assertSame('d', $document->embedded->name);
 
         // Update the entire embedded document with a mapped object via query builder
-        $query = $this->dm->createQueryBuilder(__NAMESPACE__ . '\GH611Document')
-            ->update()
+        $query = $this->dm->createQueryBuilder(GH611Document::class)
+            ->updateOne()
             ->field('id')->equals($documentId)
             ->field('embedded._id')->exists(false)
             ->field('embedded')->set(new GH611EmbeddedDocument(7, 'e'))
@@ -107,7 +110,7 @@ class GH611Test extends BaseTest
 
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__ . '\GH611Document', $documentId);
+        $document = $this->dm->find(GH611Document::class, $documentId);
 
         $this->assertSame($documentId, $document->id);
         $this->assertSame(7, $document->embedded->id);
@@ -121,7 +124,7 @@ class GH611Document
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedOne(targetDocument="GH611EmbeddedDocument") */
+    /** @ODM\EmbedOne(targetDocument=GH611EmbeddedDocument::class) */
     public $embedded;
 }
 

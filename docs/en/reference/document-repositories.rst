@@ -46,40 +46,6 @@ with Doctrine's Criteria API.
 
     All above methods will include additional criteria specified by :ref:`Filters <filters>`.
 
-.. note::
-
-    Magic ``findBy`` and ``findOneBy`` calls described below are deprecated in 1.2 and
-    will be removed in 2.0.
-
-Additional methods that are not defined explicitly in the repository class may also be
-used if they follow a specific naming convention:
-
-.. code-block:: php
-
-    <?php
-
-    $group = $documentManager->find(Group::class, 123);
-    /* @var $repository \Doctrine\ODM\MongoDB\DocumentRepository */
-    $repository = $documentManager->getRepository(User::class);
-    $usersInGroup = $repository->findByGroup($group);
-    $randomUser = $repository->findOneByStatus('active');
-
-In the above example, ``findByGroup()`` and ``findOneByStatus()`` will be handled by
-the ``__call`` method, which intercepts calls to undefined methods. If the invoked
-method's name starts with "findBy" or "findOneBy", ODM will attempt to infer mapped
-properties from the remainder of the method name ("Group" or "Status" as per example).
-The above calls are equivalent to:
-
-.. code-block:: php
-
-    <?php
-
-    $group = $documentManager->find(Group::class, 123);
-    /* @var $repository \Doctrine\ODM\MongoDB\DocumentRepository */
-    $repository = $documentManager->getRepository(User::class);
-    $usersInGroup = $repository->findBy(['group' => $group]);
-    $randomUser = $repository->findOneBy(['status' => 'active']);
-
 Custom Repositories
 -------------------
 
@@ -107,13 +73,6 @@ document class like so:
             <!-- ... -->
         </document>
 
-    .. code-block:: yaml
-
-        Documents\User:
-            repositoryClass: Repositories\\UserRepository
-            collection: user
-            # ...
-
 The next step is implementing your repository class. In most cases, ODM's default
 ``DocumentRepository`` class may be extended with additional methods that you need.
 More complex cases that require passing additional dependencies to a custom repository
@@ -127,7 +86,7 @@ class will be discussed in the next section.
 
     class UserRepository extends DocumentRepository
     {
-        public function findDisabled()
+        public function findDisabled(): array
         {
             return $this->findBy(['disabled' => true, 'activated' => true]);
         }

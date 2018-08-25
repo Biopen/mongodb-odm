@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -12,32 +14,24 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
  */
 class CmsArticle
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     public $id;
-    /**
-     * @ODM\Field(type="string")
-     */
+    /** @ODM\Field(type="string") */
     public $topic;
-    /**
-     * @ODM\Field(type="string")
-     */
+    /** @ODM\Field(type="string") */
     public $text;
-    /**
-     * @ODM\ReferenceOne(targetDocument="CmsUser")
-     */
+    /** @ODM\ReferenceOne(targetDocument=CmsUser::class) */
     public $user;
-    /**
-     * @ODM\ReferenceMany(targetDocument="CmsComment")
-     */
+    /** @ODM\ReferenceMany(targetDocument=CmsComment::class) */
     public $comments;
 
-    public function setAuthor(CmsUser $author) {
+    public function setAuthor(CmsUser $author)
+    {
         $this->user = $author;
     }
 
-    public function addComment(CmsComment $comment) {
+    public function addComment(CmsComment $comment)
+    {
         $this->comments[] = $comment;
         $comment->setArticle($this);
     }

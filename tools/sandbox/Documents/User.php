@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use function md5;
 
 /** @ODM\Document(collection="users") */
 class User
@@ -17,13 +20,13 @@ class User
     /** @ODM\Field(type="string") */
     protected $password;
 
-    /** @ODM\EmbedOne(targetDocument="Address") */
+    /** @ODM\EmbedOne(targetDocument=Address::class) */
     protected $address;
 
-    /** @ODM\ReferenceOne(targetDocument="Account") */
+    /** @ODM\ReferenceOne(targetDocument=Account::class) */
     protected $account;
 
-    /** @ODM\EmbedMany(targetDocument="Phonenumber") */
+    /** @ODM\EmbedMany(targetDocument=Phonenumber::class) */
     protected $phonenumbers;
 
     public function __construct()

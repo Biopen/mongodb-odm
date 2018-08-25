@@ -1,66 +1,73 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Aggregation\Stage;
 
 use Doctrine\Common\Persistence\Mapping\MappingException as BaseMappingException;
-use Doctrine\MongoDB\Aggregation\Stage as BaseStage;
 use Doctrine\ODM\MongoDB\Aggregation\Builder;
+use Doctrine\ODM\MongoDB\Aggregation\Stage;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
-use Doctrine\ODM\MongoDB\Mapping\ClassMetadataInfo;
 use Doctrine\ODM\MongoDB\Mapping\MappingException;
+use Doctrine\ODM\MongoDB\Persisters\DocumentPersister;
 
 /**
  * Fluent interface for building aggregation pipelines.
  */
-class Lookup extends BaseStage\Lookup
+class Lookup extends Stage
 {
-    /**
-     * @var DocumentManager
-     */
+    /** @var DocumentManager */
     private $dm;
 
-    /**
-     * @var ClassMetadata
-     */
+    /** @var ClassMetadata */
     private $class;
 
-    /**
-     * @param Builder $builder
-     * @param string $from
-     * @param DocumentManager $documentManager
-     * @param ClassMetadata $class
-     */
-    public function __construct(Builder $builder, $from, DocumentManager $documentManager, ClassMetadata $class)
+    /** @var ClassMetadata */
+    private $targetClass;
+
+    /** @var string */
+    private $from;
+
+    /** @var string */
+    private $localField;
+
+    /** @var string */
+    private $foreignField;
+
+    /** @var string */
+    private $as;
+
+    public function __construct(Builder $builder, string $from, DocumentManager $documentManager, ClassMetadata $class)
     {
+        parent::__construct($builder);
+
         $this->dm = $documentManager;
         $this->class = $class;
 
-        parent::__construct($builder, $from);
+        $this->from($from);
     }
 
     /**
-     * @param string $from
-     * @return $this
+     * Specifies the name of the new array field to add to the input documents.
+     *
+     * The new array field contains the matching documents from the from
+     * collection. If the specified name already exists in the input document,
+     * the existing field is overwritten.
      */
-    public function from($from)
+    public function alias(string $alias): self
+    {
+        $this->as = $alias;
+
+        return $this;
+    }
+
+    /**
+     * Specifies the collection or field name in the same database to perform the join with.
+     *
+     * The from collection cannot be sharded.
+     */
+    public function from(string $from): self
     {
         // $from can either be
         // a) a field name indicating a reference to a different document. Currently, only REFERENCE_STORE_AS_ID is supported
@@ -73,51 +80,129 @@ class Lookup extends BaseStage\Lookup
 
         // Check if mapped class with given name exists
         try {
-            $targetMapping = $this->dm->getClassMetadata($from);
-            return parent::from($targetMapping->getCollection());
+            $this->targetClass = $this->dm->getClassMetadata($from);
         } catch (BaseMappingException $e) {
-            return parent::from($from);
+            $this->from = $from;
+            return $this;
         }
+
+        if ($this->targetClass->isSharded()) {
+            throw MappingException::cannotUseShardedCollectionInLookupStages($this->targetClass->name);
+        }
+
+        $this->from = $this->targetClass->getCollection();
+        return $this;
     }
 
     /**
-     * @param string $fieldName
-     * @return $this
+     * {@inheritdoc}
+     */
+    public function getExpression(): array
+    {
+        return [
+            '$lookup' => [
+                'from' => $this->from,
+                'localField' => $this->localField,
+                'foreignField' => $this->foreignField,
+                'as' => $this->as,
+            ],
+        ];
+    }
+
+    /**
+     * Specifies the field from the documents input to the $lookup stage.
+     *
+     * $lookup performs an equality match on the localField to the foreignField
+     * from the documents of the from collection. If an input document does not
+     * contain the localField, the $lookup treats the field as having a value of
+     * null for matching purposes.
+     */
+    public function localField(string $localField): self
+    {
+        $this->localField = $this->prepareFieldName($localField, $this->class);
+        return $this;
+    }
+
+    /**
+     * Specifies the field from the documents in the from collection.
+     *
+     * $lookup performs an equality match on the foreignField to the localField
+     * from the input documents. If a document in the from collection does not
+     * contain the foreignField, the $lookup treats the value as null for
+     * matching purposes.
+     */
+    public function foreignField(string $foreignField): self
+    {
+        $this->foreignField = $this->prepareFieldName($foreignField, $this->targetClass);
+        return $this;
+    }
+
+    protected function prepareFieldName(string $fieldName, ?ClassMetadata $class = null): string
+    {
+        if (! $class) {
+            return $fieldName;
+        }
+
+        return $this->getDocumentPersister($class)->prepareFieldName($fieldName);
+    }
+
+    /**
      * @throws MappingException
      */
-    private function fromReference($fieldName)
+    private function fromReference(string $fieldName): self
     {
         if (! $this->class->hasReference($fieldName)) {
             MappingException::referenceMappingNotFound($this->class->name, $fieldName);
         }
 
         $referenceMapping = $this->class->getFieldMapping($fieldName);
-        $targetMapping = $this->dm->getClassMetadata($referenceMapping['targetDocument']);
-        parent::from($targetMapping->getCollection());
+        $this->targetClass = $this->dm->getClassMetadata($referenceMapping['targetDocument']);
+        if ($this->targetClass->isSharded()) {
+            throw MappingException::cannotUseShardedCollectionInLookupStages($this->targetClass->name);
+        }
+
+        $this->from = $this->targetClass->getCollection();
 
         if ($referenceMapping['isOwningSide']) {
-            if ($referenceMapping['storeAs'] !== ClassMetadataInfo::REFERENCE_STORE_AS_ID) {
-                throw MappingException::cannotLookupNonIdReference($this->class->name, $fieldName);
+            switch ($referenceMapping['storeAs']) {
+                case ClassMetadata::REFERENCE_STORE_AS_ID:
+                case ClassMetadata::REFERENCE_STORE_AS_REF:
+                    $referencedFieldName = ClassMetadata::getReferenceFieldName($referenceMapping['storeAs'], $referenceMapping['name']);
+                    break;
+
+                default:
+                    throw MappingException::cannotLookupDbRefReference($this->class->name, $fieldName);
             }
 
             $this
                 ->foreignField('_id')
-                ->localField($referenceMapping['name']);
+                ->localField($referencedFieldName);
         } else {
-            if (isset($referenceMapping['repositoryMethod'])) {
+            if (isset($referenceMapping['repositoryMethod']) || ! isset($referenceMapping['mappedBy'])) {
                 throw MappingException::repositoryMethodLookupNotAllowed($this->class->name, $fieldName);
             }
 
-            $mappedByMapping = $targetMapping->getFieldMapping($referenceMapping['mappedBy']);
-            if ($mappedByMapping['storeAs'] !== ClassMetadataInfo::REFERENCE_STORE_AS_ID) {
-                throw MappingException::cannotLookupNonIdReference($this->class->name, $fieldName);
+            $mappedByMapping = $this->targetClass->getFieldMapping($referenceMapping['mappedBy']);
+            switch ($mappedByMapping['storeAs']) {
+                case ClassMetadata::REFERENCE_STORE_AS_ID:
+                case ClassMetadata::REFERENCE_STORE_AS_REF:
+                    $referencedFieldName = ClassMetadata::getReferenceFieldName($mappedByMapping['storeAs'], $mappedByMapping['name']);
+                    break;
+
+                default:
+                    throw MappingException::cannotLookupDbRefReference($this->class->name, $fieldName);
             }
 
             $this
                 ->localField('_id')
-                ->foreignField($mappedByMapping['name']);
+                ->foreignField($referencedFieldName);
         }
 
         return $this;
+    }
+
+    private function getDocumentPersister(ClassMetadata $class): DocumentPersister
+    {
+        return $this->dm->getUnitOfWork()->getDocumentPersister($class->name);
     }
 }

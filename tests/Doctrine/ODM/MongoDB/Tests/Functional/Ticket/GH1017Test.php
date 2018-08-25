@@ -1,16 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Doctrine\ODM\MongoDB\UnitOfWork;
+use function in_array;
+use function spl_object_hash;
 
 class GH1017Test extends BaseTest
 {
     public function testSPLObjectHashCollisionOnReplacingEmbeddedDoc()
     {
-        $usedHashes = array();
+        $usedHashes = [];
         $owner = new GH1017Document();
         $this->dm->persist($owner);
         $this->dm->flush();
@@ -41,8 +45,7 @@ class GH1017Test extends BaseTest
         // At the time of writing this test,
         // collision was always found when $i == 2
 
-        $this->markTestSkipped('No object hash collision '
-            . 'encountered after ' . $maxTries . 'tries');
+        $this->markTestSkipped('No object hash collision encountered after ' . $maxTries . ' tries');
     }
 }
 
@@ -52,7 +55,7 @@ class GH1017Document
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedOne(targetDocument="GH1017EmbeddedDocument") */
+    /** @ODM\EmbedOne(targetDocument=GH1017EmbeddedDocument::class) */
     public $embedded;
 }
 

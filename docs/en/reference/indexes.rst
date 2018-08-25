@@ -22,7 +22,7 @@ property:
         {
             /** @Id */
             public $id;
-    
+
             /** @Field(type="string") @Index */
             public $username;
         }
@@ -31,38 +31,31 @@ property:
 
         <field name="username" index="true" />
 
-    .. code-block:: yaml
-    
-        fields:
-          username:
-            index: true
-
-
 Index Options
 -------------
 
 You can customize the index with some additional options:
 
-- 
+-
    **name** - The name of the index. This can be useful if you are
    indexing many keys and Mongo complains about the index name being
    too long.
-- 
+-
    **dropDups** - If a unique index is being created and duplicate
    values exist, drop all but one duplicate value.
-- 
+-
    **background** - Create indexes in the background while other
    operations are taking place. By default, index creation happens
    synchronously. If you specify TRUE with this option, index creation
    will be asynchronous.
-- 
+-
    **safe** - You can specify a boolean value for checking if the
    index creation succeeded. The driver will throw a
    MongoCursorException if index creation failed.
 -
-   **expireAfterSeconds** - If you specify this option then the associated 
-   document will be automatically removed when the provided time (in seconds) 
-   has passed. This option is bound to a number of limitations, which 
+   **expireAfterSeconds** - If you specify this option then the associated
+   document will be automatically removed when the provided time (in seconds)
+   has passed. This option is bound to a number of limitations, which
    are documented at https://docs.mongodb.com/manual/tutorial/expire-data/.
 -
    **order** - The order of the index (asc or desc).
@@ -96,7 +89,7 @@ Unique Index
         {
             /** @Id */
             public $id;
-    
+
             /** @Field(type="string") @Index(unique=true, order="asc") */
             public $username;
         }
@@ -104,14 +97,6 @@ Unique Index
     .. code-block:: xml
 
         <field fieldName="username" index="true" unique="true" order="asc" />
-
-    .. code-block:: yaml
-
-        fields:
-          username:
-            index: true
-            unique: true
-            order: true
 
 For your convenience you can quickly specify a unique index with
 ``@UniqueIndex``:
@@ -129,7 +114,7 @@ For your convenience you can quickly specify a unique index with
         {
             /** @Id */
             public $id;
-    
+
             /** @Field(type="string") @UniqueIndex(order="asc") */
             public $username;
         }
@@ -137,13 +122,6 @@ For your convenience you can quickly specify a unique index with
     .. code-block:: xml
 
         <field fieldName="username" unique="true" order="asc" />
-
-    .. code-block:: yaml
-
-        fields:
-          username:
-            unique: true
-            order: true
 
 If you want to specify an index that consists of multiple fields
 you can specify them on the class doc block:
@@ -164,10 +142,10 @@ you can specify them on the class doc block:
         {
             /** @Id */
             public $id;
-    
+
             /** @Field(type="int") */
             public $accountId;
-    
+
             /** @Field(type="string") */
             public $username;
         }
@@ -178,7 +156,7 @@ you can specify them on the class doc block:
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mongo-mapping
                             http://doctrine-project.org/schemas/orm/doctrine-mongo-mapping.xsd">
-    
+
             <document name="Documents\User">
                 <indexes>
                     <index>
@@ -189,19 +167,6 @@ you can specify them on the class doc block:
                 </indexes>
             </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        Documents\User:
-          indexes:
-            usernameacctid:
-              options:
-                unique: true
-              keys:
-                accountId:
-                  order: asc
-                username:
-                  order: asc
 
 To specify multiple indexes you must use the ``@Indexes``
 annotation:
@@ -216,17 +181,17 @@ annotation:
          * @Document
          * @Indexes({
          *   @Index(keys={"accountId"="asc"}),
-         *   @Index(keys={"username"="asc"}) 
+         *   @Index(keys={"username"="asc"})
          * })
          */
         class User
         {
             /** @Id */
             public $id;
-    
+
             /** @Field(type="int") */
             public $accountId;
-    
+
             /** @Field(type="string") */
             public $username;
         }
@@ -237,7 +202,7 @@ annotation:
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mongo-mapping
                             http://doctrine-project.org/schemas/orm/doctrine-mongo-mapping.xsd">
-    
+
             <document name="Documents\User">
                 <indexes>
                     <index>
@@ -249,19 +214,6 @@ annotation:
                 </indexes>
             </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        Documents\User:
-          indexes:
-            accountId:
-              keys:
-                accountId:
-                  order: asc
-            username:
-              keys:
-                username:
-                  order: asc
 
 Embedded Indexes
 ----------------
@@ -275,7 +227,7 @@ documents.
     <?php
 
     namespace Documents;
-    
+
     /** @EmbeddedDocument */
     class Comment
     {
@@ -301,7 +253,7 @@ Now if we had a ``BlogPost`` document with the ``Comment`` document embedded man
         /** @Field(type="string") @Index */
         private $slug;
 
-        /** @EmbedMany(targetDocument="Comment") */
+        /** @EmbedMany(targetDocument=Comment::class) */
         private $comments;
     }
 
@@ -355,17 +307,17 @@ options structures manually:
         {
             /** @Id */
             public $id;
-    
-            /** @EmbedOne(targetDocument="Coordinates") */
+
+            /** @EmbedOne(targetDocument=Coordinates::class) */
             public $coordinates;
         }
-    
+
         /** @EmbeddedDocument */
         class Coordinates
         {
             /** @Field(type="float") */
             public $latitude;
-    
+
             /** @Field(type="float") */
             public $longitude;
         }
@@ -377,13 +329,6 @@ options structures manually:
                 <key name="coordinates" order="2d" />
             </index>
         </indexes>
-
-    .. code-block:: yaml
-
-        indexes:
-          coordinates:
-            keys:
-              coordinates: 2d
 
 Partial indexes
 ---------------
@@ -424,126 +369,8 @@ index.
             </index>
         </indexes>
 
-    .. code-block:: yaml
-
-        indexes:
-          partialIndexExample:
-            keys:
-              coordinates: asc
-            options:
-              partialFilterExpression:
-                version: { $gt: 1 }
-
 .. note::
 
     Partial indexes are only available with MongoDB 3.2 or newer. For more
     information on partial filter expressions, read the
     `official MongoDB documentation <https://docs.mongodb.com/manual/core/index-partial/>`_.
-
-Requiring Indexes
------------------
-
-.. note::
-    Requiring Indexes was deprecated in 1.2 and will be removed in 2.0.
-
-Sometimes you may want to require indexes for all your queries to ensure you don't let stray unindexed queries
-make it to the database and cause performance problems.
-
-
-.. configuration-block::
-
-    .. code-block:: php
-
-        <?php
-
-        /**
-         * @Document(requireIndexes=true)
-         */
-        class Place
-        {
-            /** @Id */
-            public $id;
-    
-            /** @Field(type="string") @Index */
-            public $city;
-        }
-
-    .. code-block:: xml
-
-        // Documents.Place.dcm.xml
-
-        <?xml version="1.0" encoding="UTF-8"?>
-        
-        <doctrine-mongo-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mongo-mapping"
-              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-              xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mongo-mapping
-                            http://doctrine-project.org/schemas/orm/doctrine-mongo-mapping.xsd">
-        
-            <document name="Documents\Place" require-indexes="true">
-                <field fieldName="id" id="true" />
-                <field fieldName="city" type="string" />
-                <indexes>
-                    <index>
-                        <key name="city">
-                    </index>
-                </indexes>
-            </document>
-        </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        # Documents.Place.dcm.yml
-
-        Documents\Place:
-          fields:
-            id:
-              id: true
-            city:
-              type: string
-          indexes:
-            index1:
-              keys:
-                city: asc
-
-When you run queries it will check that it is indexed and throw an exception if it is not indexed:
-
-.. code-block:: php
-
-    <?php
-
-    $qb = $dm->createQueryBuilder('Documents\Place')
-        ->field('city')->equals('Nashville');
-    $query = $qb->getQuery();
-    $places = $query->execute();
-
-When you execute the query it will throw an exception if `city` was not indexed in the database. You can control
-whether or not an exception will be thrown by using the `requireIndexes()` method:
-
-.. code-block:: php
-
-    <?php
-
-    $qb->requireIndexes(false);
-
-You can also check if the query is indexed and with the `isIndexed()` method and use it to display your
-own notification when a query is unindexed:
-
-.. code-block:: php
-
-    <?php
-
-    $query = $qb->getQuery();
-    if (!$query->isIndexed()) {
-        $notifier->addError('Cannot execute queries that are not indexed.');
-    }
-
-If you don't want to require indexes for all queries you can set leave `requireIndexes` as false and control
-it on a per query basis:
-
-.. code-block:: php
-
-    <?php
-
-    $qb->requireIndexes(true);
-    $query = $qb->getQuery();
-    $results = $query->execute();

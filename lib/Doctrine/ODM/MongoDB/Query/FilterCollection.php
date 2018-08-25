@@ -1,26 +1,15 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Query;
 
+use Doctrine\ODM\MongoDB\Configuration;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
+use Doctrine\ODM\MongoDB\Query\Filter\BsonFilter;
+use function array_map;
+use function call_user_func_array;
 
 /**
  * Collection class for all the query filters.
@@ -30,31 +19,32 @@ class FilterCollection
     /**
      * The used Configuration.
      *
-     * @var \Doctrine\ODM\MongoDB\Configuration
+     * @var Configuration
      */
     private $config;
 
     /**
      * The DocumentManager that "owns" this FilterCollection instance.
      *
-     * @var \Doctrine\ODM\MongoDB\DocumentManager
+     * @var DocumentManager
      */
     private $dm;
 
     /**
      * Instances of enabled filters.
      *
-     * @var array
+     * @var BsonFilter[]
      */
-    private $enabledFilters = array();
+    private $enabledFilters = [];
 
     /**
-     * Constructor.
+     * The CriteriaMerger instance.
      *
-     * @param DocumentManager $dm
-     * @param CriteriaMerger  $cm
+     * @var CriteriaMerger
      */
-    public function __construct(DocumentManager $dm, CriteriaMerger $cm = null)
+    private $cm;
+
+    public function __construct(DocumentManager $dm, ?CriteriaMerger $cm = null)
     {
         $this->dm = $dm;
         $this->cm = $cm ?: new CriteriaMerger();
@@ -65,9 +55,9 @@ class FilterCollection
     /**
      * Get all the enabled filters.
      *
-     * @return array The enabled filters.
+     * @return BsonFilter[]
      */
-    public function getEnabledFilters()
+    public function getEnabledFilters(): array
     {
         return $this->enabledFilters;
     }
@@ -75,19 +65,15 @@ class FilterCollection
     /**
      * Enables a filter from the collection.
      *
-     * @param string $name Name of the filter.
-     *
      * @throws \InvalidArgumentException If the filter does not exist.
-     *
-     * @return \Doctrine\ODM\MongoDB\Query\Filter\BsonFilter The enabled filter.
      */
-    public function enable($name)
+    public function enable(string $name): BsonFilter
     {
-        if ( ! $this->has($name)) {
+        if (! $this->has($name)) {
             throw new \InvalidArgumentException("Filter '" . $name . "' does not exist.");
         }
 
-        if ( ! $this->isEnabled($name)) {
+        if (! $this->isEnabled($name)) {
             $filterClass = $this->config->getFilterClassName($name);
             $filterParameters = $this->config->getFilterParameters($name);
             $filter = new $filterClass($this->dm);
@@ -105,13 +91,9 @@ class FilterCollection
     /**
      * Disables a filter.
      *
-     * @param string $name Name of the filter.
-     *
-     * @return \Doctrine\ODM\MongoDB\Query\Filter\BsonFilter The disabled filter.
-     *
      * @throws \InvalidArgumentException If the filter does not exist.
      */
-    public function disable($name)
+    public function disable(string $name): BsonFilter
     {
         // Get the filter to return it
         $filter = $this->getFilter($name);
@@ -124,15 +106,11 @@ class FilterCollection
     /**
      * Get an enabled filter from the collection.
      *
-     * @param string $name Name of the filter.
-     *
-     * @return \Doctrine\ODM\MongoDB\Query\Filter\BsonFilter The filter.
-     *
      * @throws \InvalidArgumentException If the filter is not enabled.
      */
-    public function getFilter($name)
+    public function getFilter(string $name): BsonFilter
     {
-        if ( ! $this->isEnabled($name)) {
+        if (! $this->isEnabled($name)) {
             throw new \InvalidArgumentException("Filter '" . $name . "' is not enabled.");
         }
         return $this->enabledFilters[$name];
@@ -144,38 +122,34 @@ class FilterCollection
      * @param string $name Name of the filter.
      * @return bool true if the filter exists, false if not.
      */
-    public function has($name)
+    public function has(string $name): bool
     {
-        return null !== $this->config->getFilterClassName($name);
+        return $this->config->getFilterClassName($name) !== null;
     }
 
     /**
      * Checks whether filter with given name is enabled.
-     *
-     * @param string $name Name of the filter
-     * @return bool
      */
-    public function isEnabled($name)
+    public function isEnabled(string $name): bool
     {
         return isset($this->enabledFilters[$name]);
     }
 
     /**
      * Gets enabled filter criteria.
-     *
-     * @param ClassMetadata $class
-     * @return array
      */
-    public function getFilterCriteria(ClassMetadata $class)
+    public function getFilterCriteria(ClassMetadata $class): array
     {
         if (empty($this->enabledFilters)) {
-            return array();
+            return [];
         }
 
         return call_user_func_array(
-            array($this->cm, 'merge'),
+            [$this->cm, 'merge'],
             array_map(
-                function($filter) use ($class) { return $filter->addFilterCriteria($class); },
+                function ($filter) use ($class) {
+                    return $filter->addFilterCriteria($class);
+                },
                 $this->enabledFilters
             )
         );

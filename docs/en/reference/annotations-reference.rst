@@ -38,156 +38,6 @@ will be invoked with the first value found as its single argument.
 For additional information on using `@AlsoLoad`_, see
 :doc:`Migrations <migrating-schemas>`.
 
-@Bin
-----
-
-Alias of `@Field`_, with "type" attribute set to "bin". Converts value to
-`MongoBinData`_ with ``MongoBinData::GENERIC`` sub-type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @Bin */
-    private $data;
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "bin".
-
-@BinCustom
-----------
-
-Alias of `@Field`_, with "type" attribute set to "bin\_custom". Converts
-value to `MongoBinData`_ with ``MongoBinData::CUSTOM`` sub-type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @BinCustom */
-    private $data;
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "bin\_custom".
-
-@BinFunc
---------
-
-Alias of `@Field`_, with "type" attribute set to "bin\_func". Converts value to
-`MongoBinData`_ with ``MongoBinData::FUNC`` sub-type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @BinFunc */
-    private $data;
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "bin\_func".
-
-@BinMD5
--------
-
-Alias of `@Field`_, with "type" attribute set to "bin\_md5". Converts value to
-`MongoBinData`_ with ``MongoBinData::MD5`` sub-type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @BinMD5 */
-    private $password;
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "bin\_md5".
-
-@BinUUID
---------
-
-Alias of `@Field`_, with "type" attribute set to "bin\_uuid". Converts value to
-`MongoBinData`_ with ``MongoBinData::UUID`` sub-type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @BinUUID */
-    private $uuid;
-
-.. note::
-
-    Per the `BSON specification`_, this sub-type is deprecated in favor of the
-    RFC 4122 UUID sub-type. Consider using `@BinUUIDRFC4122`_ instead.
-
-@BinUUIDRFC4122
----------------
-
-Alias of `@Field`_, with "type" attribute set to "bin\_uuid\_rfc4122". Converts
-value to `MongoBinData`_ with ``MongoBinData::UUID_RFC4122`` sub-type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @BinUUIDRFC4122 */
-    private $uuid;
-
-.. note::
-
-    RFC 4122 UUIDs must be 16 bytes. The PHP driver will throw an exception if
-    the binary data's size is invalid.
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "bin\_uuid\_rfc4122".
-
-@Bool
------
-
-Alias of `@Field`_, with "type" attribute set to "bool". Internally it uses
-exactly same logic as `@Boolean`_ annotation and "boolean" type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @Bool */
-    private $active;
-
-.. note::
-
-    This annotation is deprecated because it uses a keyword that was reserved in
-    PHP 7. It will be removed in ODM 2.0. Please use the `@Field`_ annotation
-    with type "bool".
-
-
-@Boolean
---------
-
-Alias of `@Field`_, with "type" attribute set to "boolean".
-
-.. code-block:: php
-
-    <?php
-
-    /** @Boolean */
-    private $active;
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "bool".
-
 @ChangeTrackingPolicy
 ---------------------
 
@@ -207,44 +57,6 @@ This annotation is used to change the change tracking policy for a document:
     }
 
 For a list of available policies, read the section on :ref:`change tracking policies <change_tracking_policies>`.
-
-
-@Collection
------------
-
-Alias of `@Field`_, with "type" attribute set to "collection". Stores and
-retrieves the value as a numerically indexed array.
-
-.. code-block:: php
-
-    <?php
-
-    /** @Collection */
-    private $tags = array();
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "collection".
-
-@Date
------
-
-Alias of `@Field`_, with "type" attribute set to "date". Values of any type
-(e.g. integer, string, DateTime) will be converted to `MongoDate`_ for storage
-in MongoDB. The property will be a DateTime when loaded from the database.
-
-.. code-block:: php
-
-    <?php
-
-    /** @Date */
-    private $createdAt;
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "date".
 
 @DefaultDiscriminatorValue
 --------------------------
@@ -322,60 +134,6 @@ the discriminator field instead of the |FQCN|.
         // ...
     }
 
-.. _annotation_distance:
-
-@Distance
----------
-
-This annotation can be used in combination with geospatial indexes and the
-:ref:`geoNear() <geonear>` query method to populate the property with the
-calculated distance value.
-
-.. code-block:: php
-
-    <?php
-
-    /**
-     * @Document
-     * @Index(keys={"coordinates"="2d"})
-     */
-    class Place
-    {
-        /** @Id */
-        public $id;
-    
-        /** @EmbedOne(targetDocument="Coordinates") */
-        public $coordinates;
-    
-        /** @Distance */
-        public $distance;
-    }
-    
-    /** @EmbeddedDocument */
-    class Coordinates
-    {
-        /** @Field(type="float") */
-        public $latitude;
-    
-        /** @Field(type="float") */
-        public $longitude;
-    }
-
-Now you can run a `geoNear command`_ and access the computed distance. The
-following example would return the distance of the city nearest the query
-coordinates:
-
-.. code-block:: php
-
-    <?php
-
-    $city = $this->dm->createQuery('City')
-        ->geoNear(50, 60)
-        ->limit(1)
-        ->getQuery()
-        ->getSingleResult();
-    echo $city->distance;
-
 @Document
 ---------
 
@@ -385,24 +143,24 @@ managed by ODM.
 Optional attributes:
 
 -
-   db - By default, the document manager will use the MongoDB database defined
-   in the configuration, but this option may be used to override the database
-   for a particular document class.
+   ``db`` - By default, the document manager will use the MongoDB database
+   defined in the configuration, but this option may be used to override the
+   database for a particular document class.
 -
-   collection - By default, the collection name is derived from the document's
-   class name, but this option may be used to override that behavior.
+   ``collection`` - By default, the collection name is derived from the
+   document's class name, but this option may be used to override that behavior.
 -
-   repositoryClass - Specifies a custom repository class to use.
+   ``repositoryClass`` - Specifies a custom repository class to use.
 -
-   indexes - Specifies an array of indexes for this document.
+   ``indexes`` - Specifies an array of indexes for this document.
 -
-   requireIndexes - Specifies whether or not queries for this document should
-   require indexes by default. This may also be specified per query.
+   ``readOnly`` - Prevents document from being updated: it can only be inserted,
+   upserted or removed.
 -
-   writeConcern - Specifies the write concern for this document that overwrites
-   the default write concern specified in the configuration. It does not overwrite
-   a write concern given as :ref:`option <flush_options>` to the ``flush``
-   method when committing your documents.
+   ``writeConcern`` - Specifies the write concern for this document that
+   overwrites the default write concern specified in the configuration. It does
+   not overwrite a write concern given as :ref:`option <flush_options>` to the
+  ``flush``  method when committing your documents.
 
 .. code-block:: php
 
@@ -416,16 +174,13 @@ Optional attributes:
      *     indexes={
      *         @Index(keys={"username"="desc"}, options={"unique"=true})
      *     },
-     *     requireIndexes=true
+     *     readOnly=true,
      * )
      */
     class User
     {
         //...
     }
-
-.. note::
-    Requiring Indexes was deprecated in 1.2 and will be removed in 2.0.
 
 @EmbedMany
 ----------
@@ -436,22 +191,24 @@ document, it embeds a collection of documents.
 Optional attributes:
 
 -
-    targetDocument - A |FQCN| of the target document.
+    ``targetDocument`` - A |FQCN| of the target document.
 -
-    discriminatorField - The database field name to store the discriminator
+    ``discriminatorField`` - The database field name to store the discriminator
     value within the embedded document.
 -
-    discriminatorMap - Map of discriminator values to class names.
+    ``discriminatorMap`` - Map of discriminator values to class names.
 -
-    defaultDiscriminatorValue - A default value for discriminatorField if no value
-    has been set in the embedded document.
+    ``defaultDiscriminatorValue`` - A default value for discriminatorField if no
+    value has been set in the embedded document.
 -
-    strategy - The strategy used to persist changes to the collection. Possible
-    values are ``addToSet``, ``pushAll``, ``set``, and ``setArray``. ``pushAll``
-    is the default. See :ref:`storage_strategies` for more information.
+    ``strategy`` - The strategy used to persist changes to the collection.
+    Possible values are ``addToSet``, ``pushAll``, ``set``, and ``setArray``.
+    ``pushAll`` is the default. See :ref:`storage_strategies` for more
+    information.
 -
-    collectionClass - A |FQCN| of class that implements ``Collection`` interface
-    and is used to hold documents. Doctrine's ``ArrayCollection`` is used by default.
+    ``collectionClass`` - A |FQCN| of class that implements ``Collection``
+    interface and is used to hold documents. Doctrine's ``ArrayCollection`` is
+    used by default.
 
 .. code-block:: php
 
@@ -494,15 +251,15 @@ following excerpt from the MongoDB documentation:
 Optional attributes:
 
 -
-    targetDocument - A |FQCN| of the target document.
+    ``targetDocument`` - A |FQCN| of the target document.
 -
-    discriminatorField - The database field name to store the discriminator
+    ``discriminatorField`` - The database field name to store the discriminator
     value within the embedded document.
 -
-    discriminatorMap - Map of discriminator values to class names.
+    ``discriminatorMap`` - Map of discriminator values to class names.
 -
-    defaultDiscriminatorValue - A default value for discriminatorField if no value
-    has been set in the embedded document.
+    ``defaultDiscriminatorValue`` - A default value for discriminatorField if no
+    value has been set in the embedded document.
 
 .. code-block:: php
 
@@ -529,7 +286,8 @@ document classes.
 -----------------
 
 Marks the document as embeddable. This annotation is required for any documents
-to be stored within an `@EmbedOne`_ or `@EmbedMany`_ relationship.
+to be stored within an `@EmbedOne`_, `@EmbedMany`_ or `@File\\Metadata`_
+relationship.
 
 .. code-block:: php
 
@@ -540,20 +298,20 @@ to be stored within an `@EmbedOne`_ or `@EmbedMany`_ relationship.
     {
         /** @Field(type="float") */
         private $amount;
-    
+
         public function __construct($amount)
         {
             $this->amount = (float) $amount;
         }
         //...
     }
-    
+
     /** @Document(db="finance", collection="wallets") */
     class Wallet
     {
-        /** @EmbedOne(targetDocument="Money") */
+        /** @EmbedOne(targetDocument=Money::class) */
         private $money;
-    
+
         public function setMoney(Money $money)
         {
             $this->money = $money;
@@ -573,7 +331,7 @@ multiple document classes, and even other embedded documents!
 Optional attributes:
 
 -
-   indexes - Specifies an array of indexes for this embedded document, to be
+   ``indexes`` - Specifies an array of indexes for this embedded document, to be
    included in the schemas of any embedding documents.
 
 @Field
@@ -586,16 +344,16 @@ lifecycle.
 Optional attributes:
 
 -
-   type - Name of the ODM type, which will determine the value's representation
-   in PHP and BSON (i.e. MongoDB). See :ref:`doctrine_mapping_types` for a list
-   of types. Defaults to "string".
+   ``type`` - Name of the ODM type, which will determine the value's
+   representation in PHP and BSON (i.e. MongoDB). See
+   :ref:`doctrine_mapping_types` for a list of types. Defaults to "string".
 -
-   name - By default, the property name is used for the field name in MongoDB;
-   however, this option may be used to specify a database field name.
+   ``name`` - By default, the property name is used for the field name in
+   MongoDB; however, this option may be used to specify a database field name.
 -
-   nullable - By default, ODM will ``$unset`` fields in MongoDB if the PHP value
-   is null. Specify true for this option to force ODM to store a null value in
-   the database instead of unsetting the field.
+   ``nullable`` - By default, ODM will ``$unset`` fields in MongoDB if the PHP
+   value is null. Specify true for this option to force ODM to store a null
+   value in the database instead of unsetting the field.
 
 Examples:
 
@@ -607,73 +365,98 @@ Examples:
      * @Field(type="string")
      */
     protected $username;
-    
+
     /**
      * @Field(type="string", name="co")
      */
     protected $country;
-    
+
     /**
      * @Field(type="float")
      */
     protected $height;
 
+.. _file:
+
 @File
 -----
 
-Marks an annotated instance variable as a file. Additionally, this instructs ODM
-to store the entire document in `GridFS`_. Only a single field in a document may
-be mapped as a file.
+This marks the document as a GridFS file. GridFS allow storing larger amounts of
+data than regular documents.
 
-The instance variable will be an ``Doctrine\MongoDB\GridFSFile`` object, which
-is a wrapper class for `MongoGridFSFile`_ and facilitates access to the file
-data in GridFS. If the variable is a file path string when the document is first
-persisted, ODM will convert it to GridFSFile object automatically.
+Optional attributes:
 
-.. code-block:: php
+-
+   ``db`` - By default, the document manager will use the MongoDB database
+   defined in the configuration, but this option may be used to override the
+   database for a particular file.
+-
+   ``bucketName`` - By default, files are stored in a bucket called ``fs``. You
+   can customize that bucket name with this property.
+-
+   ``repositoryClass`` - Specifies a custom repository class to use. The class
+   must extend the ``Doctrine\ODM\MongoDB\Repository\GridFSRepository``
+   interface.
+-
+   ``indexes`` - Specifies an array of indexes for this document.
+-
+   ``readOnly`` - Prevents the file from being updated: it can only be inserted,
+   upserted or removed.
+-
+   ``writeConcern`` - Specifies the write concern for this file that overwrites
+   the default write concern specified in the configuration.
 
-    <?php
+.. _file_chunksize:
 
-    /** @File */
-    private $file;
+@File\ChunkSize
+---------------
 
-Additional fields can be mapped in GridFS documents like any other, but metadata
-fields set by the driver (e.g. ``length``) should be mapped with `@NotSaved`_ so
-as not to inadvertently overwrite them. Some metadata fields, such as
-``filename`` may be modified and do not require `@NotSaved`_. In the following
-example, we also add a custom field to refer to the corresponding User document
-that created the file.
+This maps the ``chunkSize`` property of a GridFS file to a property. It contains
+the size of a single file chunk in bytes. No other options can be set.
 
-.. code-block:: php
+.. _file_filename:
 
-    <?php
+@File\Filename
+--------------
 
-    /** @Field(type="string") */
-    private $filename;
+This maps the ``filename`` property of a GridFS file to a property. No other
+options can be set.
 
-    /** @NotSaved(type="int") */
-    private $length;
+.. _file_length:
 
-    /** @NotSaved(type="string") */
-    private $md5;
+@File\Length
+------------
 
-    /** @NotSaved(type="date") */
-    private $uploadDate;
+This maps the ``length`` property of a GridFS file to a property. It contains
+the size of the entire file in bytes. No other options can be set.
 
-    /** @ReferenceOne(targetDocument="Documents\User") */
-    private $uploadedBy;
+.. _file_metadata:
 
-@Float
-------
+@File\Metadata
+--------------
 
-Alias of `@Field`_, with "type" attribute set to "float".
+This maps the ``metadata`` property of a GridFS file to a property. Metadata can
+be used to store additional properties in a file. The metadata document must be
+an embedded document mapped using `@EmbeddedDocument`_.
 
-.. note::
+Optional attributes:
 
-    This annotation is deprecated because it uses a keyword that was reserved in
-    PHP 7. It will be removed in ODM 2.0. Please use the `@Field`_ annotation
-    with type "float".
+-
+    ``targetDocument`` - A |FQCN| of the target document.
+-
+    ``discriminatorField`` - The database field name to store the discriminator
+    value within the embedded document.
+-
+    ``discriminatorMap`` - Map of discriminator values to class names.
+-
+    ``defaultDiscriminatorValue`` - A default value for ``discriminatorField``
+    if no value has been set in the embedded document.
 
+@File\UploadDate
+----------------
+
+This maps the ``uploadDate`` property of a GridFS file to a property. No other
+options can be set.
 
 .. _haslifecyclecallbacks:
 
@@ -697,23 +480,12 @@ annotation will cause Doctrine to ignore the callbacks.
         public function sendWelcomeEmail() {}
     }
 
-@Hash
------
-
-Alias of `@Field`_, with "type" attribute set to "hash". Stores and retrieves
-the value as an associative array.
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "hash".
-
 @Id
 ---
 
 The annotated instance variable will be marked as the document identifier. The
-default behavior is to store a `MongoId`_ instance, but you may customize this
-via the :ref:`strategy <basic_mapping_identifiers>` attribute.
+default behavior is to store an `MongoDB\BSON\ObjectId`_ instance, but you may
+customize this via the :ref:`strategy <basic_mapping_identifiers>` attribute.
 
 .. code-block:: php
 
@@ -725,53 +497,6 @@ via the :ref:`strategy <basic_mapping_identifiers>` attribute.
         /** @Id */
         protected $id;
     }
-
-@Increment
-----------
-
-The increment type is just like an integer field, except that it will be updated
-using the ``$inc`` operator instead of ``$set``:
-
-.. code-block:: php
-
-    <?php
-
-    class Package
-    {
-        /** @Increment */
-        private $downloads = 0;
-
-        public function incrementDownloads()
-        {
-            $this->downloads++;
-        }
-
-        // ...
-    }
-
-Now, update a Package instance like so:
-
-.. code-block:: php
-
-    <?php
-
-    $package->incrementDownloads();
-    $dm->flush();
-
-The query sent to Mongo would resemble the following:
-
-.. code-block:: json
-
-    { "$inc": { "downloads": 1 } }
-
-The field will be incremented by the difference between the new and old values.
-This is useful if many requests are attempting to update the field concurrently.
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "int" or "float" and use the "increment"
-    strategy.
 
 @Index
 ------
@@ -785,12 +510,12 @@ single-field indexes.
 Optional attributes:
 
 -
-    keys - Mapping of indexed fields to their ordering or index type. ODM will
-    allow "asc" and "desc" to be used in place of ``1`` and ``-1``,
-    respectively. Special index types (e.g. "2dsphere") should be specified as
+    ``keys`` - Mapping of indexed fields to their ordering or index type. ODM
+    will allow ``asc`` and ``desc`` to be used in place of ``1`` and ``-1``,
+    respectively. Special index types (e.g. ``2dsphere``) should be specified as
     strings. This is required when `@Index`_ is used at the class level.
 -
-    options - Options for creating the index
+    ``options`` - Options for creating the index
 
 The ``keys`` and ``options`` attributes correspond to the arguments for
 `MongoCollection::createIndex() <http://php.net/manual/en/mongocollection.createindex.php>`_.
@@ -866,7 +591,7 @@ Examples:
     {
         // ...
     }
-    
+
     /**
      * @Document
      * @InheritanceType("SINGLE_COLLECTION")
@@ -877,61 +602,6 @@ Examples:
     {
         // ...
     }
-
-@Int
-----
-
-Alias of `@Field`_, with "type" attribute set to "int".
-
-.. code-block:: php
-
-    <?php
-
-    /** @Int */
-    private $columns;
-
-.. note::
-
-    This annotation is deprecated because it uses a keyword that was reserved in
-    PHP 7. It will be removed in ODM 2.0. Please use the `@Field`_ annotation
-    with type "int".
-
-@Integer
---------
-
-Alias of `@Field`_, with "type" attribute set to "integer". Internally it uses
-exactly same logic as `@Int`_ annotation and "int" type.
-
-.. code-block:: php
-
-    <?php
-
-    /** @Integer */
-    private $columns;
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "int".
-
-@Key
-----
-
-Alias of `@Field`_, with "type" attribute set to "key". The value will be
-converted to `MongoMaxKey`_ or `MongoMinKey`_ if it is true or false,
-respectively.
-
-.. note::
-
-    The BSON MaxKey and MinKey types are internally used by MongoDB for indexing
-    and sharding. There is generally no reason to use these in an application.
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "key".
-
-.. _annotations_reference_lock:
 
 @Lock
 -----
@@ -991,7 +661,7 @@ method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PostLoad */
         public function postLoad()
         {
@@ -1016,7 +686,7 @@ the method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PostPersist */
         public function postPersist()
         {
@@ -1041,7 +711,7 @@ the method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PostRemove */
         public function postRemove()
         {
@@ -1066,7 +736,7 @@ the method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PostUpdate */
         public function postUpdate()
         {
@@ -1091,7 +761,7 @@ method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PreFlush */
         public function preFlush()
         {
@@ -1118,7 +788,7 @@ method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PreLoad */
         public function preLoad(PreLoadEventArgs $eventArgs)
         {
@@ -1143,7 +813,7 @@ the method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PrePersist */
         public function prePersist()
         {
@@ -1168,7 +838,7 @@ the method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PreRemove */
         public function preRemove()
         {
@@ -1193,7 +863,7 @@ the method to be registered.
     class Article
     {
         // ...
-    
+
         /** @PreUpdate */
         public function preUpdated()
         {
@@ -1202,6 +872,30 @@ the method to be registered.
     }
 
 See :ref:`lifecycle_events` for more information.
+
+@ReadPreference
+---------------
+
+Specifies `Read Preference <https://docs.mongodb.com/manual/core/read-preference/>_`
+that will be applied when querying for the annotated document.
+
+.. code-block:: php
+
+    <?php
+
+    namespace Documents;
+
+    /**
+     * @Document
+     * @ODM\ReadPreference("primaryPreferred", tags={
+     *   { "dc"="east" },
+     *   { "dc"="west" },
+     *   {  }
+     * })
+     */
+    class User
+    {
+    }
 
 .. _annotations_reference_reference_many:
 
@@ -1214,48 +908,53 @@ documents.
 Optional attributes:
 
 -
-    targetDocument - A |FQCN| of the target document.
+    ``targetDocument`` - A |FQCN| of the target document. A ``targetDocument``
+    is required when using ``storeAs: id``.
 -
-    simple - deprecated (use ``storeAs: id``)
+    ``storeAs`` - Indicates how to store the reference. ``id`` stores the
+    identifier, ``ref`` an embedded object containing the ``id`` field and
+    (optionally) a discriminator. ``dbRef`` and ``dbRefWithDb`` store a `DBRef`_
+    object and are deprecated in favor of ``ref``. Note that ``id`` references
+    are not compatible with the discriminators.
 -
-    storeAs - Indicates how to store the reference. ``id`` uses ``MongoId``,
-    ``dbRef`` uses a `DBRef`_ without ``$db`` value and ``dbRefWithDb`` stores
-    a full `DBRef`_ (``$ref``, ``$id``, and ``$db``). Note that ``id``
-    references are not compatible with the discriminators.
+    ``cascade`` - Cascade Option
 -
-    cascade - Cascade Option
+    ``discriminatorField`` - The field name to store the discriminator value within
+    the reference object.
 -
-    discriminatorField - The field name to store the discriminator value within
-    the `DBRef`_ object.
+    ``discriminatorMap`` - Map of discriminator values to class names.
 -
-    discriminatorMap - Map of discriminator values to class names.
+    ``defaultDiscriminatorValue`` - A default value for ``discriminatorField``
+    if no value has been set in the referenced document.
 -
-    defaultDiscriminatorValue - A default value for discriminatorField if no value
-    has been set in the embedded document.
+    ``inversedBy`` - The field name of the inverse side. Only allowed on owning side.
 -
-    inversedBy - The field name of the inverse side. Only allowed on owning side.
+    ``mappedBy`` - The field name of the owning side. Only allowed on the
+    inverse side.
 -
-    mappedBy - The field name of the owning side. Only allowed on the inverse side.
+    ``repositoryMethod`` - The name of the repository method to call to populate
+    this reference.
 -
-    repositoryMethod - The name of the repository method to call to populate this reference.
+    ``sort`` - The default sort for the query that loads the reference.
 -
-    sort - The default sort for the query that loads the reference.
+    ``criteria`` - Array of default criteria for the query that loads the
+    reference.
 -
-    criteria - Array of default criteria for the query that loads the reference.
+    ``limit`` - Limit for the query that loads the reference.
 -
-    limit - Limit for the query that loads the reference.
+    ``skip`` - Skip for the query that loads the reference.
 -
-    skip - Skip for the query that loads the reference.
+    ``strategy`` - The strategy used to persist changes to the collection.
+    Possible values are ``addToSet``, ``pushAll``, ``set``, and ``setArray``.
+    ``pushAll`` is the default. See :ref:`storage_strategies` for more
+    information.
 -
-    strategy - The strategy used to persist changes to the collection. Possible
-    values are ``addToSet``, ``pushAll``, ``set``, and ``setArray``. ``pushAll``
-    is the default. See :ref:`storage_strategies` for more information.
+    ``collectionClass`` - A |FQCN| of class that implements ``Collection``
+    interface and is used to hold documents. Doctrine's ``ArrayCollection`` is
+    used by default
 -
-    collectionClass - A |FQCN| of class that implements ``Collection`` interface
-    and is used to hold documents. Doctrine's ``ArrayCollection`` is used by default
--
-    prime - A list of references contained in the target document that will be
-    initialized when the collection is loaded. Only allowed for inverse
+    ``prime`` - A list of references contained in the target document that will
+    be initialized when the collection is loaded. Only allowed for inverse
     references.
 
 .. code-block:: php
@@ -1288,38 +987,42 @@ Defines an instance variable holds a related document instance.
 Optional attributes:
 
 -
-    targetDocument - A |FQCN| of the target document.
+    ``targetDocument`` - A |FQCN| of the target document. A ``targetDocument``
+    is required when using ``storeAs: id``.
 -
-    simple - deprecated (use ``storeAs: id``)
+    ``storeAs`` - Indicates how to store the reference. ``id`` stores the
+    identifier, ``ref`` an embedded object containing the ``id`` field and
+    (optionally) a discriminator. ``dbRef`` and ``dbRefWithDb`` store a `DBRef`_
+    object and are deprecated in favor of ``ref``. Note that ``id`` references
+    are not compatible with the discriminators.
 -
-    storeAs - Indicates how to store the reference. ``id`` uses ``MongoId``,
-    ``dbRef`` uses a `DBRef`_ without ``$db`` value and ``dbRefWithDb`` stores
-    a full `DBRef`_ (``$ref``, ``$id``, and ``$db``). Note that ``id``
-    references are not compatible with the discriminators.
+    ``cascade`` - Cascade Option
 -
-    cascade - Cascade Option
+    ``discriminatorField`` - The field name to store the discriminator value
+    within the reference object.
 -
-    discriminatorField - The field name to store the discriminator value within
-    the `DBRef`_ object.
+    ``discriminatorMap`` - Map of discriminator values to class names.
 -
-    discriminatorMap - Map of discriminator values to class names.
+    ``defaultDiscriminatorValue`` - A default value for ``discriminatorField``
+    if no value has been set in the referenced document.
 -
-    defaultDiscriminatorValue - A default value for discriminatorField if no value
-    has been set in the embedded document.
+    ``inversedBy`` - The field name of the inverse side. Only allowed on owning
+    side.
 -
-    inversedBy - The field name of the inverse side. Only allowed on owning side.
+    ``mappedBy`` - The field name of the owning side. Only allowed on the
+    inverse side.
 -
-    mappedBy - The field name of the owning side. Only allowed on the inverse side.
+    ``repositoryMethod`` - The name of the repository method to call to populate
+    this reference.
 -
-    repositoryMethod - The name of the repository method to call to populate this reference.
+    ``sort`` - The default sort for the query that loads the reference.
 -
-    sort - The default sort for the query that loads the reference.
+    ``criteria`` - Array of default criteria for the query that loads the
+    reference.
 -
-    criteria - Array of default criteria for the query that loads the reference.
+    ``limit`` - Limit for the query that loads the reference.
 -
-    limit - Limit for the query that loads the reference.
--
-    skip - Skip for the query that loads the reference.
+    ``skip`` - Skip for the query that loads the reference.
 
 .. code-block:: php
 
@@ -1357,43 +1060,6 @@ for sharding the document collection.
     {
         //...
     }
-
-
-@String
--------
-
-Alias of `@Field`_, with "type" attribute set to "string".
-
-.. code-block:: php
-
-    <?php
-
-    /** @String */
-    private $username;
-
-.. note::
-
-    This annotation is deprecated because it uses a keyword that was reserved in
-    PHP 7. It will be removed in ODM 2.0. Please use the `@Field`_ annotation
-    with type "string".
-
-
-@Timestamp
-----------
-
-Alias of `@Field`_, with "type" attribute set to "timestamp". The value will be
-converted to `MongoTimestamp`_ for storage in MongoDB.
-
-.. note::
-
-    The BSON timestamp type is an internal type used for MongoDB's replication
-    and sharding. If you need to store dates in your application, you should use
-    the "date" type instead.
-
-.. note::
-
-    This annotation is deprecated and will be removed in ODM 2.0. Please use the
-    `@Field`_ annotation with type "timestamp".
 
 @UniqueIndex
 ------------
@@ -1433,13 +1099,6 @@ versioned parent document.
 .. _BSON specification: http://bsonspec.org/spec.html
 .. _DBRef: https://docs.mongodb.com/manual/reference/database-references/#dbrefs
 .. _geoNear command: https://docs.mongodb.com/manual/reference/command/geoNear/
-.. _GridFS: https://docs.mongodb.com/manual/core/gridfs/
-.. _MongoBinData: http://php.net/manual/en/class.mongobindata.php
-.. _MongoDate: http://php.net/manual/en/class.mongodate.php
-.. _MongoGridFSFile: http://php.net/manual/en/class.mongogridfsfile.php
-.. _MongoId: http://php.net/manual/en/class.mongoid.php
-.. _MongoMaxKey: http://php.net/manual/en/class.mongomaxkey.php
-.. _MongoMinKey: http://php.net/manual/en/class.mongominkey.php
-.. _MongoTimestamp: http://php.net/manual/en/class.mongotimestamp.php
+.. _MongoDB\BSON\ObjectId: https://secure.php.net/manual/en/class.mongodb-bson-objectid.php
 .. |FQCN| raw:: html
   <abbr title="Fully-Qualified Class Name">FQCN</abbr>

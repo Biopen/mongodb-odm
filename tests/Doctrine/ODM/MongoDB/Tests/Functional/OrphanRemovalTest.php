@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Repository\DocumentRepository;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class OrphanRemovalTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class OrphanRemovalTest extends BaseTest
 {
     public function testOrphanRemoval()
     {
@@ -240,20 +244,55 @@ class OrphanRemovalTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertNotNull($this->getProfileRepository()->find($profile->id), 'Profile 1 should not have been removed');
     }
 
-    /**
-     * @return \Doctrine\ODM\MongoDB\DocumentRepository
-     */
-    private function getUserRepository()
+    public function testOrphanRemovalOnRemoveWithoutCascade()
     {
-        return $this->dm->getRepository('Doctrine\ODM\MongoDB\Tests\Functional\OrphanRemovalUser');
+        $profile1 = new OrphanRemovalProfile();
+        $user = new OrphanRemovalUser();
+        $user->profile = $profile1;
+        $this->dm->persist($user);
+        $this->dm->persist($user->profile);
+        $this->dm->flush();
+
+        $this->dm->remove($user);
+        $this->dm->flush();
+
+        $this->assertNull($this->getProfileRepository()->find($profile1->id), 'Profile 1 should have been removed');
+    }
+
+    public function testOrphanRemovalReferenceManyOnRemoveWithoutCascade()
+    {
+        $profile1 = new OrphanRemovalProfile();
+        $profile2 = new OrphanRemovalProfile();
+
+        $user = new OrphanRemovalUser();
+        $user->profileMany[] = $profile1;
+        $user->profileMany[] = $profile2;
+        $this->dm->persist($user);
+        $this->dm->persist($profile1);
+        $this->dm->persist($profile2);
+        $this->dm->flush();
+
+        $this->dm->remove($user);
+        $this->dm->flush();
+
+        $this->assertNull($this->getProfileRepository()->find($profile1->id), 'Profile 1 should have been removed');
+        $this->assertNull($this->getProfileRepository()->find($profile2->id), 'Profile 2 should have been removed');
     }
 
     /**
-     * @return \Doctrine\ODM\MongoDB\DocumentRepository
+     * @return DocumentRepository
+     */
+    private function getUserRepository()
+    {
+        return $this->dm->getRepository(OrphanRemovalUser::class);
+    }
+
+    /**
+     * @return DocumentRepository
      */
     private function getProfileRepository()
     {
-        return $this->dm->getRepository('Doctrine\ODM\MongoDB\Tests\Functional\OrphanRemovalProfile');
+        return $this->dm->getRepository(OrphanRemovalProfile::class);
     }
 }
 
@@ -263,17 +302,17 @@ class OrphanRemovalUser
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceOne(targetDocument="OrphanRemovalProfile", orphanRemoval=true) */
+    /** @ODM\ReferenceOne(targetDocument=OrphanRemovalProfile::class, orphanRemoval=true) */
     public $profile;
 
-    /** @ODM\ReferenceOne(targetDocument="OrphanRemovalProfile", orphanRemoval=false) */
+    /** @ODM\ReferenceOne(targetDocument=OrphanRemovalProfile::class, orphanRemoval=false) */
     public $profileNoOrphanRemoval;
 
-    /** @ODM\ReferenceMany(targetDocument="OrphanRemovalProfile", orphanRemoval=true) */
-    public $profileMany = array();
+    /** @ODM\ReferenceMany(targetDocument=OrphanRemovalProfile::class, orphanRemoval=true) */
+    public $profileMany = [];
 
-    /** @ODM\ReferenceMany(targetDocument="OrphanRemovalProfile", orphanRemoval=false) */
-    public $profileManyNoOrphanRemoval = array();
+    /** @ODM\ReferenceMany(targetDocument=OrphanRemovalProfile::class, orphanRemoval=false) */
+    public $profileManyNoOrphanRemoval = [];
 }
 
 /** @ODM\Document */

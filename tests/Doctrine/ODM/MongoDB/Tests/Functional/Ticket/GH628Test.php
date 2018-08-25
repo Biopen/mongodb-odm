@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -8,12 +10,12 @@ class GH628Test extends BaseTest
 {
     public function testQueryBuilderShouldOnlyPrepareFirstPartOfRawFields()
     {
-        $query = $this->dm->createQueryBuilder(__NAMESPACE__ . '\GH628Document')
+        $query = $this->dm->createQueryBuilder(GH628Document::class)
             ->field('foo.bar.baz')->equals(1)
             ->getQuery()
             ->getQuery();
 
-        $expected = array('f.bar.baz' => 1);
+        $expected = ['f.bar.baz' => 1];
 
         $this->assertEquals($expected, $query['query']);
     }

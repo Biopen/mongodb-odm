@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\Common\Collections\ArrayCollection;
@@ -14,7 +16,7 @@ class IdentifiedChapter
     /** @ODM\Field(type="string") */
     public $name;
 
-    /** @ODM\EmbedMany(targetDocument="Page") */
+    /** @ODM\EmbedMany(targetDocument=Page::class) */
     public $pages;
 
     public function __construct($name = null)

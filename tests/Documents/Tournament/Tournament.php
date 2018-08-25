@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents\Tournament;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -7,7 +9,7 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 /**
  * @ODM\Document
  * @ODM\InheritanceType("SINGLE_COLLECTION")
- * @ODM\DiscriminatorMap({"football"="TournamentFootball","tennis": "TournamentTennis"})
+ * @ODM\DiscriminatorMap({"football"=TournamentFootball::class,"tennis": TournamentTennis::class})
  */
 class Tournament
 {
@@ -17,8 +19,8 @@ class Tournament
     /** @ODM\Field */
     private $name;
 
-    /** @ODM\ReferenceMany(targetDocument="Participant", cascade={"all"}) */
-    protected $participants = array();
+    /** @ODM\ReferenceMany(targetDocument=Participant::class, cascade={"all"}) */
+    protected $participants = [];
 
     public function __construct($name)
     {

@@ -1,20 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use function count;
+use function end;
 
-class GH1229Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH1229Test extends BaseTest
 {
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $firstParentId;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $secondParentId;
 
     /**
@@ -134,7 +135,7 @@ class GH1229Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 /** @ODM\Document */
 class GH1229Parent
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 
     /** @ODM\Id */
     public $id;
@@ -155,18 +156,12 @@ class GH1229Parent
         return $this->children->toArray();
     }
 
-    /**
-     * @param GH1229Child $child
-     */
     public function addChild(GH1229Child $child)
     {
         $child->setOrder(count($this->children));
         $this->children->add($child);
     }
 
-    /**
-     * @param GH1229Child $child
-     */
     public function removeChild(GH1229Child $child)
     {
         $this->children->removeElement($child);
@@ -180,9 +175,11 @@ class GH1229Parent
     public function reorderChildren($starting, $change)
     {
         foreach ($this->children as $child) {
-            if ($child->getOrder() >= $starting) {
-                $child->setOrder($child->getOrder() + $change);
+            if ($child->getOrder() < $starting) {
+                continue;
             }
+
+            $child->setOrder($child->getOrder() + $change);
         }
     }
 }
@@ -190,7 +187,7 @@ class GH1229Parent
 /** @ODM\EmbeddedDocument */
 class GH1229Child
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 
     /** @ODM\Field(type="string") */
     public $name;
@@ -230,5 +227,5 @@ class GH1229Child
 /** @ODM\EmbeddedDocument */
 class GH1229ChildTypeB extends GH1229Child
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 }

@@ -1,20 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\Ecommerce\ConfigurableProduct;
-use Documents\Ecommerce\StockItem;
 use Documents\Ecommerce\Currency;
 use Documents\Ecommerce\Money;
 use Documents\Ecommerce\Option;
+use Documents\Ecommerce\StockItem;
 
-class EcommerceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class EcommerceTest extends BaseTest
 {
     public function setUp()
     {
         parent::setUp();
 
-        $currencies = array('USD' => 1, 'EURO' => 1.7, 'JPN' => 0.0125);
+        $currencies = ['USD' => 1, 'EURO' => 1.7, 'JPN' => 0.0125];
 
         foreach ($currencies as $name => &$multiplier) {
             $multiplier = new Currency($name, $multiplier);
@@ -41,15 +44,15 @@ class EcommerceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $product = $this->getProduct();
         $price =  $product->getOption('small')->getPrice(true);
         $currency = $price->getCurrency();
-        $this->assertTrue($currency instanceof Currency);
-        $this->assertEquals(3, count($product->getOptions()));
+        $this->assertInstanceOf(Currency::class, $currency);
+        $this->assertCount(3, $product->getOptions());
         $this->assertEquals(12.99, $product->getOption('small')->getPrice());
 
-        $usdCurrency = $this->dm->getRepository('Documents\Ecommerce\Currency')->findOneBy(array('name' => 'USD'));
+        $usdCurrency = $this->dm->getRepository(Currency::class)->findOneBy(['name' => 'USD']);
         $this->assertNotNull($usdCurrency);
         $usdCurrency->setMultiplier('2');
 
-        $this->assertTrue($product->getOption('small')->getStockItem() instanceof \Documents\Ecommerce\StockItem);
+        $this->assertInstanceOf(StockItem::class, $product->getOption('small')->getStockItem());
         $this->assertNotNull($product->getOption('small')->getStockItem()->getId());
         $this->assertEquals(12.99 * 2, $product->getOption('small')->getPrice());
     }
@@ -59,38 +62,30 @@ class EcommerceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $product = $this->getProduct();
         $price =  $product->getOption('small')->getPrice(true);
         $currency = $price->getCurrency();
-        $this->assertTrue($currency instanceof Currency);
+        $this->assertInstanceOf(Currency::class, $currency);
         $this->assertNotNull($currency->getId());
-        $this->assertEquals($currency, $this->dm->getRepository('Documents\Ecommerce\Currency')->findOneBy(array('name' => Currency::USD)));
+        $this->assertEquals($currency, $this->dm->getRepository(Currency::class)->findOneBy(['name' => Currency::USD]));
     }
 
     public function testRemoveOption()
     {
         $product = $this->getProduct();
 
-        $this->assertEquals(3, count($product->getOptions()));
+        $this->assertCount(3, $product->getOptions());
         $product->removeOption('small');
-        $this->assertEquals(2, count($product->getOptions()));
+        $this->assertCount(2, $product->getOptions());
         $this->dm->flush();
         $this->dm->detach($product);
         unset($product);
         $this->assertFalse(isset($product));
 
         $product = $this->getProduct();
-        $this->assertEquals(2, count($product->getOptions()));
-    }
-
-    public function testDoesNotSaveTransientFields()
-    {
-        $product = $this->getProduct();
-
-        $product->selectOption('small');
-        $this->dm->flush();
+        $this->assertCount(2, $product->getOptions());
     }
 
     protected function getProduct()
     {
-        $products = $this->dm->getRepository('Documents\Ecommerce\ConfigurableProduct')
+        $products = $this->dm->getRepository(ConfigurableProduct::class)
             ->createQueryBuilder()
             ->getQuery()
             ->execute();

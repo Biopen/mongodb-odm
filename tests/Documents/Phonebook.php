@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\Common\Collections\ArrayCollection;
@@ -11,7 +13,7 @@ class Phonebook
     /** @ODM\Field(type="string") */
     private $title;
 
-    /** @ODM\EmbedMany(targetDocument="Phonenumber") */
+    /** @ODM\EmbedMany(targetDocument=Phonenumber::class) */
     private $phonenumbers;
 
     public function __construct($title)

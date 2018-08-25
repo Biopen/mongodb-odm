@@ -1,11 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use MongoDB\BSON\ObjectId;
+use function is_numeric;
+use function is_string;
 
-class NestedDocumentsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class NestedDocumentsTest extends BaseTest
 {
     public function testSimple()
     {
@@ -27,37 +33,37 @@ class NestedDocumentsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $test = $this->dm->getDocumentCollection(__NAMESPACE__.'\Order')->findOne();
+        $test = $this->dm->getDocumentCollection(Order::class)->findOne();
 
-        $this->assertInstanceOf('\MongoId', $test['product']['_id']);
+        $this->assertInstanceOf(ObjectId::class, $test['product']['_id']);
         $this->assertEquals('Order', $test['title']);
         $this->assertEquals('Product', $test['product']['title']);
 
-        $doc = $this->dm->find(__NAMESPACE__.'\Order', $order->id);
-        $this->assertInstanceOf(__NAMESPACE__.'\Order', $order);
-        $this->assertTrue(is_string($doc->product->id));
+        $doc = $this->dm->find(Order::class, $order->id);
+        $this->assertInstanceOf(Order::class, $order);
+        $this->assertInternalType('string', $doc->product->id);
         $this->assertEquals((string) $test['product']['_id'], $doc->product->id);
         $this->assertEquals('Order', $doc->title);
         $this->assertEquals('Product', $doc->product->title);
 
         $this->dm->clear();
 
-        $order = $this->dm->find(__NAMESPACE__.'\Order', $order->id);
-        $this->assertInstanceOf(__NAMESPACE__.'\Order', $order);
+        $order = $this->dm->find(Order::class, $order->id);
+        $this->assertInstanceOf(Order::class, $order);
 
-        $product = $this->dm->find(__NAMESPACE__.'\Product', $product->id);
-        $this->assertInstanceOf(__NAMESPACE__.'\Product', $product);
+        $product = $this->dm->find(Product::class, $product->id);
+        $this->assertInstanceOf(Product::class, $product);
 
         $order->product->title = 'tesgttttt';
         $this->dm->flush();
         $this->dm->clear();
 
-        $test1 = $this->dm->getDocumentCollection(__NAMESPACE__.'\Product')->findOne();
-        $test2 = $this->dm->getDocumentCollection(__NAMESPACE__.'\Order')->findOne();
+        $test1 = $this->dm->getDocumentCollection(Product::class)->findOne();
+        $test2 = $this->dm->getDocumentCollection(Order::class)->findOne();
         $this->assertNotEquals($test1['title'], $test2['product']['title']);
 
-        $order = $this->dm->find(__NAMESPACE__.'\Order', $order->id);
-        $product = $this->dm->find(__NAMESPACE__.'\Product', $product->id);
+        $order = $this->dm->find(Order::class, $order->id);
+        $product = $this->dm->find(Product::class, $product->id);
         $this->assertNotEquals($product->title, $order->product->title);
     }
 
@@ -70,7 +76,7 @@ class NestedDocumentsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $category = $this->dm->find(__NAMESPACE__.'\Category', $category->getId());
+        $category = $this->dm->find(Category::class, $category->getId());
         $this->assertNotNull($category);
         $category->setName('Root Changed');
         $children = $category->getChildren();
@@ -81,13 +87,13 @@ class NestedDocumentsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $category = $this->dm->find(__NAMESPACE__.'\Category', $category->getId());
+        $category = $this->dm->find(Category::class, $category->getId());
 
         $children = $category->getChildren();
         $this->assertEquals('Child 1 Changed', $children[0]->getName());
         $this->assertEquals('Child 2 Changed', $children[0]->getChild(0)->getName());
         $this->assertEquals('Root Changed', $category->getName());
-        $this->assertEquals(2, count($category->getChildren()));
+        $this->assertCount(2, $category->getChildren());
     }
 
     public function testNestedReference()
@@ -101,8 +107,8 @@ class NestedDocumentsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $test = $this->dm->getRepository(__NAMESPACE__.'\Hierarchy')->findOneBy(array('name' => 'Root'));
- 
+        $test = $this->dm->getRepository(Hierarchy::class)->findOneBy(['name' => 'Root']);
+
         $this->assertNotNull($test);
         $child1 = $test->getChild('Child 1')->setName('Child 1 Changed');
         $child2 = $test->getChild('Child 2')->setName('Child 2 Changed');
@@ -112,23 +118,23 @@ class NestedDocumentsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $test = $this->dm->find(__NAMESPACE__.'\Hierarchy', $test->getId());
+        $test = $this->dm->find(Hierarchy::class, $test->getId());
         $this->assertNotNull($test);
         $this->assertEquals('Root Changed', $test->getName());
         $this->assertEquals('Child 1 Changed', $test->getChild(0)->getName());
         $this->assertEquals('Child 2 Changed', $test->getChild(1)->getName());
 
-        $child3 = $this->dm->getRepository(__NAMESPACE__.'\Hierarchy')->findOneBy(array('name' => 'Child 3'));
+        $child3 = $this->dm->getRepository(Hierarchy::class)->findOneBy(['name' => 'Child 3']);
         $this->assertNotNull($child3);
         $child3->setName('Child 3 Changed');
         $this->dm->flush();
 
-        $child3 = $this->dm->getRepository(__NAMESPACE__.'\Hierarchy')->findOneBy(array('name' => 'Child 3 Changed'));
+        $child3 = $this->dm->getRepository(Hierarchy::class)->findOneBy(['name' => 'Child 3 Changed']);
         $this->assertNotNull($child3);
         $this->assertEquals('Child 3 Changed', $child3->getName());
 
-        $test = $this->dm->getDocumentCollection(__NAMESPACE__.'\Hierarchy')->findOne(array('name' => 'Child 1 Changed'));
-        $this->assertFalse(isset($test['children']), 'Test empty array is not stored');
+        $test = $this->dm->getDocumentCollection(Hierarchy::class)->findOne(['name' => 'Child 1 Changed']);
+        $this->assertArrayNotHasKey('children', $test, 'Test empty array is not stored');
     }
 }
 
@@ -141,8 +147,8 @@ class Hierarchy
     /** @ODM\Field(type="string") */
     private $name;
 
-    /** @ODM\ReferenceMany(targetDocument="Hierarchy") */
-    private $children = array();
+    /** @ODM\ReferenceMany(targetDocument=Hierarchy::class) */
+    private $children = [];
 
     public function __construct($name)
     {
@@ -198,7 +204,7 @@ class BaseCategory
     /** @ODM\Field(type="string") */
     protected $name;
 
-    /** @ODM\EmbedMany(targetDocument="ChildCategory") */
+    /** @ODM\EmbedMany(targetDocument=ChildCategory::class) */
     protected $children;
 
     public function __construct($name)
@@ -271,7 +277,7 @@ class Order
     /** @ODM\Field(type="string") */
     public $title;
 
-    /** @ODM\EmbedOne(targetDocument="ProductBackup") */
+    /** @ODM\EmbedOne(targetDocument=ProductBackup::class) */
     public $product;
 }
 

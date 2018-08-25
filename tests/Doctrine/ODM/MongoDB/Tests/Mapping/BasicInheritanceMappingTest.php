@@ -1,11 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Mapping;
 
-use Doctrine\ODM\MongoDB\Mapping\ClassMetadataFactory;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Mapping\ClassMetadataFactory;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use function serialize;
+use function unserialize;
 
-class BasicInheritanceMappingTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class BasicInheritanceMappingTest extends BaseTest
 {
     private $factory;
 
@@ -22,25 +27,25 @@ class BasicInheritanceMappingTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
      */
     public function testGetMetadataForTransientClassThrowsException()
     {
-        $this->factory->getMetadataFor('Doctrine\ODM\MongoDB\Tests\Mapping\TransientBaseClass');
+        $this->factory->getMetadataFor(TransientBaseClass::class);
     }
 
     public function testGetMetadataForSubclassWithTransientBaseClass()
     {
-        $class = $this->factory->getMetadataFor('Doctrine\ODM\MongoDB\Tests\Mapping\DocumentSubClass');
+        $class = $this->factory->getMetadataFor(DocumentSubClass::class);
 
-        $this->assertTrue(empty($class->subClasses));
-        $this->assertTrue(empty($class->parentClasses));
+        $this->assertEmpty($class->subClasses);
+        $this->assertEmpty($class->parentClasses);
         $this->assertTrue(isset($class->fieldMappings['id']));
         $this->assertTrue(isset($class->fieldMappings['name']));
     }
 
     public function testGetMetadataForSubclassWithMappedSuperclass()
     {
-        $class = $this->factory->getMetadataFor('Doctrine\ODM\MongoDB\Tests\Mapping\DocumentSubClass2');
+        $class = $this->factory->getMetadataFor(DocumentSubClass2::class);
 
-        $this->assertTrue(empty($class->subClasses));
-        $this->assertTrue(empty($class->parentClasses));
+        $this->assertEmpty($class->subClasses);
+        $this->assertEmpty($class->parentClasses);
 
         $this->assertTrue(isset($class->fieldMappings['mapped1']));
         $this->assertTrue(isset($class->fieldMappings['mapped2']));
@@ -59,13 +64,21 @@ class BasicInheritanceMappingTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
      */
     public function testSerializationWithPrivateFieldsFromMappedSuperclass()
     {
-        $class = $this->factory->getMetadataFor(__NAMESPACE__ . '\\DocumentSubClass2');
+        $class = $this->factory->getMetadataFor(DocumentSubClass2::class);
 
         $class2 = unserialize(serialize($class));
 
         $this->assertTrue(isset($class2->reflFields['mapped1']));
         $this->assertTrue(isset($class2->reflFields['mapped2']));
         $this->assertTrue(isset($class2->reflFields['mappedRelated1']));
+    }
+
+    public function testReadPreferenceIsInherited()
+    {
+        $class = $this->factory->getMetadataFor(DocumentSubClass2::class);
+
+        $this->assertSame('secondary', $class->readPreference);
+        $this->assertEquals([ ['dc' => 'east'] ], $class->readPreferenceTags);
     }
 }
 
@@ -85,7 +98,10 @@ class DocumentSubClass extends TransientBaseClass
     private $name;
 }
 
-/** @ODM\MappedSuperclass */
+/**
+ * @ODM\MappedSuperclass
+ * @ODM\ReadPreference("secondary", tags={ { "dc"="east" } })
+ */
 class MappedSuperclassBase
 {
     /** @ODM\Field(type="string") */
@@ -93,9 +109,7 @@ class MappedSuperclassBase
     /** @ODM\Field(type="string") */
     private $mapped2;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="MappedSuperclassRelated1")
-     */
+    /** @ODM\ReferenceOne(targetDocument=MappedSuperclassRelated1::class) */
     private $mappedRelated1;
 
     private $transient;

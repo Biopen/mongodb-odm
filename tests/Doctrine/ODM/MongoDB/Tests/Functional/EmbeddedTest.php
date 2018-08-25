@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\PersistentCollection;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\Address;
-use Documents\Phonenumber;
-use Documents\Account;
-use Documents\User;
 use Documents\Functional\EmbeddedTestLevel0;
 use Documents\Functional\EmbeddedTestLevel0b;
 use Documents\Functional\EmbeddedTestLevel1;
@@ -15,14 +17,17 @@ use Documents\Functional\NotSaved;
 use Documents\Functional\NotSavedEmbedded;
 use Documents\Functional\VirtualHost;
 use Documents\Functional\VirtualHostDirective;
-use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Documents\Phonenumber;
+use Documents\User;
+use MongoDB\BSON\ObjectId;
+use function get_class;
 
-class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class EmbeddedTest extends BaseTest
 {
     public function testSetEmbeddedToNull()
     {
         $user = new User();
-        $user->setId((string) new \MongoId());
+        $user->setId((string) new ObjectId());
         $user->setUsername('jwage');
         $user->setAddress(null);
 
@@ -31,7 +36,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->clear();
         $userId = $user->getId();
 
-        $user = $this->dm->getRepository('Documents\User')->find($userId);
+        $user = $this->dm->getRepository(User::class)->find($userId);
         $this->assertEquals($userId, $user->getId());
         $this->assertNull($user->getAddress());
     }
@@ -45,8 +50,8 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $test = $this->dm->getRepository('Documents\Functional\EmbeddedTestLevel0')->findOneBy(array('name' => 'test'));
-        $this->assertInstanceOf('Documents\Functional\EmbeddedTestLevel0', $test);
+        $test = $this->dm->getRepository(EmbeddedTestLevel0::class)->findOneBy(['name' => 'test']);
+        $this->assertInstanceOf(EmbeddedTestLevel0::class, $test);
 
         // Adding this flush here makes level1 not to be inserted.
         $this->dm->flush();
@@ -58,9 +63,9 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $test = $this->dm->find('Documents\Functional\EmbeddedTestLevel0', $test->id);
-        $this->assertInstanceOf('Documents\Functional\EmbeddedTestLevel0', $test);
-        $this->assertInstanceOf('Documents\Functional\EmbeddedTestLevel1', $test->level1[0]);
+        $test = $this->dm->find(EmbeddedTestLevel0::class, $test->id);
+        $this->assertInstanceOf(EmbeddedTestLevel0::class, $test);
+        $this->assertInstanceOf(EmbeddedTestLevel1::class, $test->level1[0]);
 
         $test->level1[0]->name = 'changed';
         $level1 = new EmbeddedTestLevel1();
@@ -69,8 +74,8 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $test = $this->dm->find('Documents\Functional\EmbeddedTestLevel0', $test->id);
-        $this->assertEquals(2, count($test->level1));
+        $test = $this->dm->find(EmbeddedTestLevel0::class, $test->id);
+        $this->assertCount(2, $test->level1);
         $this->assertEquals('changed', $test->level1[0]->name);
         $this->assertEquals('testing', $test->level1[1]->name);
 
@@ -78,7 +83,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $this->assertEquals(1, count($test->level1));
+        $this->assertCount(1, $test->level1);
     }
 
     public function testOneEmbedded()
@@ -102,7 +107,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->createQueryBuilder('Documents\User')
+        $user = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId())
             ->getQuery()
             ->getSingleResult();
@@ -138,7 +143,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->createQueryBuilder('Documents\User')
+        $user = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId())
             ->getQuery()
             ->getSingleResult();
@@ -148,7 +153,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testManyEmbedded()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->addPhonenumber(new Phonenumber('6155139185'));
         $user->addPhonenumber(new Phonenumber('6153303769'));
 
@@ -156,7 +161,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user2 = $this->dm->createQueryBuilder('Documents\User')
+        $user2 = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId())
             ->getQuery()
             ->getSingleResult();
@@ -238,7 +243,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
             ->getQuery()
             ->getSingleResult();
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\PersistentCollection', $test->level1);
+        $this->assertInstanceOf(PersistentCollection::class, $test->level1);
 
         // verify that test has no more level1
         $this->assertEquals(0, $test->level1->count());
@@ -378,7 +383,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->find('Documents\User', $user->getId());
+        $user = $this->dm->find(User::class, $user->getId());
         $this->assertNotNull($user);
         $address = $user->getAddress();
         $address->setAddress('changed');
@@ -386,7 +391,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->find('Documents\User', $user->getId());
+        $user = $this->dm->find(User::class, $user->getId());
         $this->assertEquals('changed', $user->getAddress()->getAddress());
     }
 
@@ -410,9 +415,9 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->flush();
 
-        $check = $this->dm->getDocumentCollection('Documents\User')->findOne();
+        $check = $this->dm->getDocumentCollection(User::class)->findOne();
         $this->assertEmpty($check['phonenumbers']);
-        $this->assertFalse(isset($check['address']));
+        $this->assertArrayNotHasKey('address', $check);
     }
 
     public function testRemoveAddDeepEmbedded()
@@ -423,11 +428,11 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $vhost->getVHostDirective()->addDirective($directive1);
 
         $directive2 = new VirtualHostDirective('Directory', '/var/www/html');
-        $directive2->addDirective(new VirtualHostDirective('AllowOverride','All'));
+        $directive2->addDirective(new VirtualHostDirective('AllowOverride', 'All'));
         $vhost->getVHostDirective()->addDirective($directive2);
 
         $directive3 = new VirtualHostDirective('Directory', '/var/www/html');
-        $directive3->addDirective(new VirtualHostDirective('RewriteEngine','on'));
+        $directive3->addDirective(new VirtualHostDirective('RewriteEngine', 'on'));
         $vhost->getVHostDirective()->addDirective($directive3);
 
         $this->dm->persist($vhost);
@@ -436,17 +441,15 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $vhost->getVHostDirective()->removeDirective($directive2);
 
         $directive4 = new VirtualHostDirective('Directory', '/var/www/html');
-        $directive4->addDirective(new VirtualHostDirective('RewriteEngine','on'));
+        $directive4->addDirective(new VirtualHostDirective('RewriteEngine', 'on'));
         $vhost->getVHostDirective()->addDirective($directive4);
-
 
         $this->dm->flush();
         $this->dm->clear();
 
-        $vhost = $this->dm->find('Documents\Functional\VirtualHost', $vhost->getId());
+        $vhost = $this->dm->find(VirtualHost::class, $vhost->getId());
 
-        foreach($vhost->getVHostDirective()->getDirectives() as $directive)
-        {
+        foreach ($vhost->getVHostDirective()->getDirectives() as $directive) {
             $this->assertNotEmpty($directive->getName());
         }
     }
@@ -462,7 +465,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $document = $this->dm->find('Documents\Functional\NotSaved', $document->id);
+        $document = $this->dm->find(NotSaved::class, $document->id);
 
         $this->assertEquals('foo', $document->embedded->name);
         $this->assertNull($document->embedded->notSaved);
@@ -470,7 +473,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testChangeEmbedOneDocumentId()
     {
-        $originalId = (string) new \MongoId();
+        $originalId = (string) new ObjectId();
 
         $test = new ChangeEmbeddedIdTest();
         $test->embed = new EmbeddedDocumentWithId();
@@ -479,7 +482,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->flush();
 
-        $newId = (string) new \MongoId();
+        $newId = (string) new ObjectId();
 
         $test->embed->id = $newId;
 
@@ -493,7 +496,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testChangeEmbedManyDocumentId()
     {
-        $originalId = (string) new \MongoId();
+        $originalId = (string) new ObjectId();
 
         $test = new ChangeEmbeddedIdTest();
         $test->embedMany[] = new EmbeddedDocumentWithId();
@@ -502,7 +505,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->flush();
 
-        $newId = (string) new \MongoId();
+        $newId = (string) new ObjectId();
 
         $test->embedMany[0]->id = $newId;
 
@@ -516,7 +519,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testEmbeddedDocumentsWithSameIdAreNotSameInstance()
     {
-        $originalId = (string) new \MongoId();
+        $originalId = (string) new ObjectId();
 
         $test = new ChangeEmbeddedIdTest();
         $test->embed = new EmbeddedDocumentWithId();
@@ -538,8 +541,8 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $test1 = new ChangeEmbeddedIdTest();
 
         $embedded = new EmbeddedDocumentWithId();
-        $embedded->id = (string) new \MongoId();;
-        $test1->embedMany = array($embedded);
+        $embedded->id = (string) new ObjectId();
+        $test1->embedMany = [$embedded];
 
         $this->dm->persist($test1);
         $this->dm->flush();
@@ -552,7 +555,6 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->flush();
 
-
         //do some operations on test1
         $this->dm->persist($test1);
         $this->dm->flush();
@@ -560,7 +562,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->clear(); //get clean results from mongo
         $test1 = $this->dm->find(get_class($test1), $test1->id);
 
-        $this->assertEquals(1, count($test1->embedMany));
+        $this->assertCount(1, $test1->embedMany);
     }
 
     public function testReusedEmbeddedDocumentsAreClonedInFact()
@@ -569,7 +571,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $test2 = new ChangeEmbeddedIdTest();
 
         $embedded = new EmbeddedDocumentWithId();
-        $embedded->id = (string) new \MongoId();
+        $embedded->id = (string) new ObjectId();
 
         $test1->embed = $embedded;
         $test2->embed = $embedded;
@@ -592,7 +594,7 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $test1 = new ChangeEmbeddedWithNameAnnotationTest();
 
         $embedded = new EmbeddedDocumentWithId();
-        $embedded->id = (string) new \MongoId();
+        $embedded->id = (string) new ObjectId();
 
         $firstEmbedded = new EmbedDocumentWithAnotherEmbed();
         $firstEmbedded->embed = $embedded;
@@ -603,6 +605,19 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $test1->embedTwo = $secondEmbedded;
 
         $this->dm->persist($test1);
+
+        $this->dm->flush();
+
+        $test1Data = $this->dm->createQueryBuilder(ChangeEmbeddedWithNameAnnotationTest::class)
+            ->hydrate(false)
+            ->field('id')
+            ->equals($test1->id)
+            ->getQuery()
+            ->getSingleResult();
+
+        $this->assertInternalType('array', $test1Data);
+
+        $this->assertArrayHasKey('m_id', $test1Data['embedOne']);
     }
 }
 
@@ -611,19 +626,13 @@ class EmbeddedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
  */
 class ChangeEmbeddedIdTest
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     public $id;
 
-    /**
-     * @ODM\EmbedOne(targetDocument="EmbeddedDocumentWithId")
-     */
+    /** @ODM\EmbedOne(targetDocument=EmbeddedDocumentWithId::class) */
     public $embed;
 
-    /**
-     * @ODM\EmbedMany(targetDocument="EmbeddedDocumentWithId")
-     */
+    /** @ODM\EmbedMany(targetDocument=EmbeddedDocumentWithId::class) */
     public $embedMany;
 
     public function __construct()
@@ -646,19 +655,13 @@ class EmbeddedDocumentWithId
  */
 class ChangeEmbeddedWithNameAnnotationTest
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     public $id;
 
-    /**
-     * @ODM\EmbedOne(targetDocument="EmbeddedDocumentWithAnotherEmbedded")
-     */
+    /** @ODM\EmbedOne(targetDocument=EmbeddedDocumentWithAnotherEmbedded::class) */
     public $embedOne;
 
-    /**
-     * @ODM\EmbedOne(targetDocument="EmbeddedDocumentWithAnotherEmbedded")
-     */
+    /** @ODM\EmbedOne(targetDocument=EmbeddedDocumentWithAnotherEmbedded::class) */
     public $embedTwo;
 }
 
@@ -667,8 +670,6 @@ class ChangeEmbeddedWithNameAnnotationTest
  */
 class EmbedDocumentWithAnotherEmbed
 {
-    /**
-     * @ODM\EmbedOne(targetDocument="EmbeddedDocumentWithId", name="m_id")
-     */
+    /** @ODM\EmbedOne(targetDocument=EmbeddedDocumentWithId::class, name="m_id") */
     public $embed;
 }

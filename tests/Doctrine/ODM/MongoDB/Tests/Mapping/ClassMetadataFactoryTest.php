@@ -1,49 +1,54 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Mapping;
 
+use Doctrine\Common\EventManager;
 use Doctrine\ODM\MongoDB\Configuration;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadataFactory;
 use Doctrine\ODM\MongoDB\Mapping\Driver\AnnotationDriver;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Doctrine\ODM\MongoDB\Tests\Mocks\DocumentManagerMock;
+use function sprintf;
 
-class ClassMetadataFactoryTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class ClassMetadataFactoryTest extends BaseTest
 {
     public function testGetMetadataForSingleClass()
     {
         // Self-made metadata
-        $cm1 = new ClassMetadata('Doctrine\ODM\MongoDB\Tests\Mapping\TestDocument1');
+        $cm1 = new ClassMetadata(TestDocument1::class);
         $cm1->setCollection('group');
         // Add a mapped field
-        $cm1->mapField(array('fieldName' => 'name', 'type' => 'string'));
+        $cm1->mapField(['fieldName' => 'name', 'type' => 'string']);
         // Add a mapped field
-        $cm1->mapField(array('fieldName' => 'id', 'id' => true));
+        $cm1->mapField(['fieldName' => 'id', 'id' => true]);
         // and a mapped association
-        $cm1->mapOneEmbedded(array('fieldName' => 'other', 'targetDocument' => 'Other'));
-        $cm1->mapOneEmbedded(array('fieldName' => 'association', 'targetDocument' => 'Other'));
+        $cm1->mapOneEmbedded(['fieldName' => 'other', 'targetDocument' => 'Other']);
+        $cm1->mapOneEmbedded(['fieldName' => 'association', 'targetDocument' => 'Other']);
 
         // SUT
         $cmf = new ClassMetadataFactoryTestSubject();
-        $cmf->setMetadataFor('Doctrine\ODM\MongoDB\Tests\Mapping\TestDocument1', $cm1);
+        $cmf->setMetadataFor(TestDocument1::class, $cm1);
 
         // Prechecks
-        $this->assertEquals(array(), $cm1->parentClasses);
+        $this->assertEquals([], $cm1->parentClasses);
         $this->assertEquals(ClassMetadata::INHERITANCE_TYPE_NONE, $cm1->inheritanceType);
         $this->assertTrue($cm1->hasField('name'));
-        $this->assertEquals(4, count($cm1->fieldMappings));
+        $this->assertCount(4, $cm1->fieldMappings);
 
         // Go
-        $cm1 = $cmf->getMetadataFor('Doctrine\ODM\MongoDB\Tests\Mapping\TestDocument1');
+        $cm1 = $cmf->getMetadataFor(TestDocument1::class);
 
         $this->assertEquals('group', $cm1->collection);
-        $this->assertEquals(array(), $cm1->parentClasses);
+        $this->assertEquals([], $cm1->parentClasses);
         $this->assertTrue($cm1->hasField('name'));
     }
 
-    public function testHasGetMetadata_NamespaceSeperatorIsNotNormalized()
+    public function testHasGetMetadataNamespaceSeparatorIsNotNormalized()
     {
-        require_once __DIR__."/Documents/GlobalNamespaceDocument.php";
+        require_once __DIR__ . '/Documents/GlobalNamespaceDocument.php';
 
         $driver = AnnotationDriver::create(__DIR__ . '/Documents');
 
@@ -53,10 +58,10 @@ class ClassMetadataFactoryTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $cmf->setConfiguration($dm->getConfiguration());
         $cmf->setDocumentManager($dm);
 
-        $m1 = $cmf->getMetadataFor("DoctrineGlobal_Article");
-        $h1 = $cmf->hasMetadataFor("DoctrineGlobal_Article");
-        $h2 = $cmf->hasMetadataFor("\DoctrineGlobal_Article");
-        $m2 = $cmf->getMetadataFor("\DoctrineGlobal_Article");
+        $m1 = $cmf->getMetadataFor('DoctrineGlobal_Article');
+        $h1 = $cmf->hasMetadataFor('DoctrineGlobal_Article');
+        $h2 = $cmf->hasMetadataFor('\DoctrineGlobal_Article');
+        $m2 = $cmf->getMetadataFor('\DoctrineGlobal_Article');
 
         $this->assertNotSame($m1, $m2);
         $this->assertFalse($h2);
@@ -68,7 +73,7 @@ class ClassMetadataFactoryTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $config = new Configuration();
         $config->setMetadataDriverImpl($driver);
 
-        $em = $this->createMock('Doctrine\Common\EventManager');
+        $em = $this->createMock(EventManager::class);
 
         $dm = new DocumentManagerMock();
         $dm->config = $config;
@@ -79,17 +84,16 @@ class ClassMetadataFactoryTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 }
 
 /* Test subject class with overriden factory method for mocking purposes */
-class ClassMetadataFactoryTestSubject extends \Doctrine\ODM\MongoDB\Mapping\ClassMetadataFactory
+class ClassMetadataFactoryTestSubject extends ClassMetadataFactory
 {
-    private $_mockMetadata = array();
-    private $_requestedClasses = array();
+    private $_mockMetadata = [];
+    private $_requestedClasses = [];
 
-    /** @override */
     protected function _newClassMetadataInstance($className)
     {
         $this->_requestedClasses[] = $className;
-        if ( ! isset($this->_mockMetadata[$className])) {
-            throw new InvalidArgumentException("No mock metadata found for class $className.");
+        if (! isset($this->_mockMetadata[$className])) {
+            throw new \InvalidArgumentException(sprintf('No mock metadata found for class %s.', $className));
         }
         return $this->_mockMetadata[$className];
     }

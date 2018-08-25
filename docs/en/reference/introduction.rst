@@ -11,7 +11,7 @@ Features Overview
 -  Map one or many embedded documents.
 -  Map one or many referenced documents.
 -  Create references between documents in different databases.
--  Map documents with Annotations, XML, YAML or plain old PHP code.
+-  Map documents with Annotations, XML or plain old PHP code.
 -  Documents can be stored on the `MongoGridFS <http://www.php.net/MongoGridFS>`_.
 -  Collection per class(concrete) and single collection inheritance supported.
 -  Map your Doctrine 2 ORM Entities to the ODM and use mixed data stores.
@@ -33,41 +33,41 @@ Here is a quick example of some PHP object documents that demonstrates a few of 
     {
         /** @ODM\Id */
         private $id;
-    
+
         /** @ODM\Field(type="int", strategy="increment") */
         private $changes = 0;
-    
+
         /** @ODM\Field(type="collection") */
         private $notes = array();
-    
+
         /** @ODM\Field(type="string") */
         private $name;
-    
+
         /** @ODM\Field(type="int") */
         private $salary;
-    
+
         /** @ODM\Field(type="date") */
         private $started;
-    
+
         /** @ODM\Field(type="date") */
         private $left;
-    
-        /** @ODM\EmbedOne(targetDocument="Address") */
+
+        /** @ODM\EmbedOne(targetDocument=Address::class) */
         private $address;
 
-        public function getId() { return $this->id; }
+        public function getId(): ?string { return $this->id; }
 
-        public function getChanges() { return $this->changes; }
-        public function incrementChanges() { $this->changes++; }
+        public function getChanges(): int { return $this->changes; }
+        public function incrementChanges(): void { $this->changes++; }
 
-        public function getNotes() { return $this->notes; }
+        public function getNotes(): array { return $this->notes; }
         public function addNote($note) { $this->notes[] = $note; }
 
-        public function getName() { return $this->name; }
-        public function setName($name) { $this->name = $name; }
+        public function getName(): ?string { return $this->name; }
+        public function setName(string $name): void { $this->name = $name; }
 
-        public function getSalary() { return $this->salary; }
-        public function setSalary($salary) { $this->salary = (int) $salary; }
+        public function getSalary(): ?int { return $this->salary; }
+        public function setSalary(int $salary): void { $this->salary = (int) $salary; }
 
         public function getStarted() { return $this->started; }
         public function setStarted(DateTime $started) { $this->started = $started; }
@@ -75,75 +75,75 @@ Here is a quick example of some PHP object documents that demonstrates a few of 
         public function getLeft() { return $this->left; }
         public function setLeft(DateTime $left) { $this->left = $left; }
 
-        public function getAddress() { return $this->address; }
-        public function setAddress(Address $address) { $this->address = $address; }
+        public function getAddress(): ?Address { return $this->address; }
+        public function setAddress(Address $address): void { $this->address = $address; }
     }
-    
+
     /** @ODM\Document */
     class Employee extends BaseEmployee
     {
-        /** @ODM\ReferenceOne(targetDocument="Documents\Manager") */
+        /** @ODM\ReferenceOne(targetDocument=Manager::class) */
         private $manager;
-    
-        public function getManager() { return $this->manager; }
-        public function setManager(Manager $manager) { $this->manager = $manager; }
+
+        public function getManager(): ?Manager { return $this->manager; }
+        public function setManager(Manager $manager): void { $this->manager = $manager; }
     }
-    
+
     /** @ODM\Document */
     class Manager extends BaseEmployee
     {
-        /** @ODM\ReferenceMany(targetDocument="Documents\Project") */
+        /** @ODM\ReferenceMany(targetDocument=Project::class) */
         private $projects;
-    
+
         public __construct() { $this->projects = new ArrayCollection(); }
 
-        public function getProjects() { return $this->projects; }
-        public function addProject(Project $project) { $this->projects[] = $project; }
+        public function getProjects(): Collection { return $this->projects; }
+        public function addProject(Project $project): void { $this->projects[] = $project; }
     }
-    
+
     /** @ODM\EmbeddedDocument */
     class Address
     {
         /** @ODM\Field(type="string") */
         private $address;
-    
+
         /** @ODM\Field(type="string") */
         private $city;
-    
+
         /** @ODM\Field(type="string") */
         private $state;
-    
+
         /** @ODM\Field(type="string") */
         private $zipcode;
 
-        public function getAddress() { return $this->address; }
-        public function setAddress($address) { $this->address = $address; }
+        public function getAddress(): ?string { return $this->address; }
+        public function setAddress(string $address): void { $this->address = $address; }
 
-        public function getCity() { return $this->city; }
-        public function setCity($city) { $this->city = $city; }
+        public function getCity(): ?string { return $this->city; }
+        public function setCity(string $city): void { $this->city = $city; }
 
-        public function getState() { return $this->state; }
-        public function setState($state) { $this->state = $state; }
+        public function getState(): ?string { return $this->state; }
+        public function setState(string $state): void { $this->state = $state; }
 
-        public function getZipcode() { return $this->zipcode; }
-        public function setZipcode($zipcode) { $this->zipcode = $zipcode; }
+        public function getZipcode(): ?string { return $this->zipcode; }
+        public function setZipcode(string $zipcode): void { $this->zipcode = $zipcode; }
     }
-    
+
     /** @ODM\Document */
     class Project
     {
         /** @ODM\Id */
         private $id;
-    
+
         /** @ODM\Field(type="string") */
         private $name;
-    
+
         public function __construct($name) { $this->name = $name; }
 
-        public function getId() { return $this->id; }
+        public function getId(): ?string { return $this->id; }
 
-        public function getName() { return $this->name; }
-        public function setName($name) { $this->name = $name; }
+        public function getName(): ?string { return $this->name; }
+        public function setName(string $name): void { $this->name = $name; }
     }
 
 Now those objects can be used just like you weren't using any
@@ -153,7 +153,7 @@ Doctrine:
 .. code-block:: php
 
     <?php
-    
+
     use Documents\Employee;
     use Documents\Address;
     use Documents\Project;
@@ -164,14 +164,14 @@ Doctrine:
     $employee->setName('Employee');
     $employee->setSalary(50000);
     $employee->setStarted(new DateTime());
-    
+
     $address = new Address();
     $address->setAddress('555 Doctrine Rd.');
     $address->setCity('Nashville');
     $address->setState('TN');
     $address->setZipcode('37209');
     $employee->setAddress($address);
-    
+
     $project = new Project('New Project');
     $manager = new Manager();
     $manager->setName('Manager');
@@ -195,7 +195,7 @@ The above would insert the following:
             (
                 [name] => New Project
             )
-    
+
     )
     Array
     (
@@ -205,7 +205,7 @@ The above would insert the following:
                 [notes] => Array
                     (
                     )
-    
+
                 [name] => Manager
                 [salary] => 100000
                 [started] => MongoDate Object
@@ -213,7 +213,7 @@ The above would insert the following:
                         [sec] => 1275265048
                         [usec] => 0
                     )
-    
+
                 [projects] => Array
                     (
                         [0] => Array
@@ -222,11 +222,11 @@ The above would insert the following:
                                 [$id] => 4c0300188ead0e947a000000
                                 [$db] => my_db
                             )
-    
+
                     )
-    
+
             )
-    
+
     )
     Array
     (
@@ -236,7 +236,7 @@ The above would insert the following:
                 [notes] => Array
                     (
                     )
-    
+
                 [name] => Employee
                 [salary] => 50000
                 [started] => MongoDate Object
@@ -244,7 +244,7 @@ The above would insert the following:
                         [sec] => 1275265048
                         [usec] => 0
                     )
-    
+
                 [address] => Array
                     (
                         [address] => 555 Doctrine Rd.
@@ -252,9 +252,9 @@ The above would insert the following:
                         [state] => TN
                         [zipcode] => 37209
                     )
-    
+
             )
-    
+
     )
 
 If we update a property and call ``->flush()`` again we'll get an
@@ -268,7 +268,7 @@ efficient update query using the atomic operators:
     $manager->addNote('Gave user 100k a year raise');
     $manager->incrementChanges(2);
     $manager->addProject($newProject);
-    
+
     $dm->persist($newProject);
     $dm->flush();
 
@@ -283,32 +283,40 @@ this:
             (
                 [changes] => 2
             )
-    
-        [$pushAll] => Array
+
+        [$push] => Array
             (
                 [notes] => Array
                     (
-                        [0] => Gave user 100k a year raise
+                        [$each] => Array
+                            (
+                                [0] => Gave user 100k a year raise
+                            )
+
                     )
-    
+
                 [projects] => Array
                     (
-                        [0] => Array
+                        [$each] => Array
                             (
-                                [$ref] => projects
-                                [$id] => 4c0310718ead0e767e030000
-                                [$db] => my_db
+                                [0] => Array
+                                    (
+                                        [$ref] => projects
+                                        [$id] => 4c0310718ead0e767e030000
+                                        [$db] => my_db
+                                    )
+
                             )
-    
+
                     )
-    
+
             )
-    
+
         [$set] => Array
             (
                 [salary] => 200000
             )
-    
+
     )
 
 This is a simple example, but it demonstrates well that you can
@@ -408,11 +416,15 @@ more paths) and register the annotations for the driver:
 
     <?php
 
+    use Doctrine\Common\Annotations\AnnotationRegistry;
+
     // ...
 
     $config->setMetadataDriverImpl(AnnotationDriver::create(__DIR__ . '/Documents'));
 
-    AnnotationDriver::registerAnnotationClasses();
+    $loader = require_once('path/to/vendor/autoload.php');
+
+    AnnotationRegistry::registerLoader([$loader, 'loadClass']);
 
 At this point, we have everything necessary to construct a ``DocumentManager``:
 
@@ -430,6 +442,7 @@ The final ``bootstrap.php`` file should look like this:
 
     <?php
 
+    use Doctrine\Common\Annotations\AnnotationRegistry;
     use Doctrine\MongoDB\Connection;
     use Doctrine\ODM\MongoDB\Configuration;
     use Doctrine\ODM\MongoDB\DocumentManager;
@@ -442,6 +455,8 @@ The final ``bootstrap.php`` file should look like this:
     $loader = require_once $file;
     $loader->add('Documents', __DIR__);
 
+    AnnotationRegistry::registerLoader([$loader, 'loadClass']);
+
     $connection = new Connection();
 
     $config = new Configuration();
@@ -451,8 +466,6 @@ The final ``bootstrap.php`` file should look like this:
     $config->setHydratorNamespace('Hydrators');
     $config->setDefaultDB('doctrine_odm');
     $config->setMetadataDriverImpl(AnnotationDriver::create(__DIR__ . '/Documents'));
-
-    AnnotationDriver::registerAnnotationClasses();
 
     $dm = DocumentManager::create($connection, $config);
 
@@ -471,23 +484,7 @@ dependency to ODM. To do this, run the following command:
 
 ::
 
-    $ composer require "alcaeus/mongo-php-adapter"
-
-Next, manually add a ``provide`` section to your ``composer.json``:
-
-.. code-block:: json
-
-    "provide": {
-        "ext-mongo": "1.6.14"
-    }
-
-This section needs to be added to work around a composer issue with libraries
-providing platform packages (such as ``ext-mongo``). Now, you may install ODM as
-described above:
-
-::
-
-    $ composer require "doctrine/mongodb-odm"
+    $ composer config "platform.ext-mongo" "1.6.16" && composer require "alcaeus/mongo-php-adapter"
 
 .. _MongoDB: https://www.mongodb.com/
 .. _10gen: http://www.10gen.com

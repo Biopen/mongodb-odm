@@ -5,20 +5,29 @@
                   xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
                   http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
 
-    <document name="Doctrine\ODM\MongoDB\Tests\Mapping\AbstractMappingDriverUser" collection="cms_users" writeConcern="1">
+    <document name="Doctrine\ODM\MongoDB\Tests\Mapping\AbstractMappingDriverUser" collection="cms_users" write-concern="1" read-only="true">
         <discriminator-field name="discr" />
         <discriminator-map>
             <discriminator-mapping value="default" class="Doctrine\ODM\MongoDB\Tests\Mapping\AbstractMappingDriverUser" />
         </discriminator-map>
         <default-discriminator-value value="default" />
-        <field fieldName="id" id="true" />
-        <field fieldName="version" version="true" type="int" />
-        <field fieldName="lock" lock="true" type="int" />
-        <field fieldName="name" name="username" type="string" />
-        <field fieldName="email" type="string" unique="true" drop-dups="true" order="desc" />
-        <field fieldName="mysqlProfileId" type="integer" unique="true" drop-dups="true" order="desc" />
-        <field fieldName="createdAt" type="date" />
-        <field fieldName="roles" type="collection" />
+        <read-preference mode="primaryPreferred">
+            <tag-set>
+                <tag name="dc" value="east"/>
+            </tag-set>
+            <tag-set>
+                <tag name="dc" value="west"/>
+            </tag-set>
+            <tag-set />
+        </read-preference>
+        <id field-name="id" />
+        <field field-name="version" version="true" type="int" />
+        <field field-name="lock" lock="true" type="int" />
+        <field field-name="name" name="username" type="string" />
+        <field field-name="email" type="string" unique="true" drop-dups="true" order="desc" />
+        <field field-name="mysqlProfileId" type="integer" unique="true" drop-dups="true" order="desc" />
+        <field field-name="createdAt" type="date" />
+        <field field-name="roles" type="collection" />
         <indexes>
             <index unique="true">
                 <key name="username" order="desc" />
@@ -36,36 +45,36 @@
                 </partial-filter-expression>
             </index>
         </indexes>
-        <reference-one target-document="Address" field="address">
+        <reference-one target-document="Doctrine\ODM\MongoDB\Tests\Mapping\Address" field="address">
             <cascade>
                 <remove />
             </cascade>
         </reference-one>
-        <reference-many target-document="Phonenumber" collection-class="PhonenumberCollection" field="phonenumbers">
+        <reference-many target-document="Doctrine\ODM\MongoDB\Tests\Mapping\Phonenumber" collection-class="Doctrine\ODM\MongoDB\Tests\Mapping\PhonenumberCollection" field="phonenumbers">
             <cascade>
                 <persist />
             </cascade>
             <discriminator-field name="discr" />
             <discriminator-map>
-                <discriminator-mapping value="home" class="HomePhonenumber" />
-                <discriminator-mapping value="work" class="WorkPhonenumber" />
+                <discriminator-mapping value="home" class="Doctrine\ODM\MongoDB\Tests\Mapping\HomePhonenumber" />
+                <discriminator-mapping value="work" class="Doctrine\ODM\MongoDB\Tests\Mapping\WorkPhonenumber" />
             </discriminator-map>
             <default-discriminator-value value="home" />
         </reference-many>
-        <reference-many target-document="Group" field="groups">
+        <reference-many target-document="Doctrine\ODM\MongoDB\Tests\Mapping\Group" field="groups">
             <cascade>
                 <all />
             </cascade>
         </reference-many>
-        <reference-many target-document="Phonenumber" fieldName="morePhoneNumbers" field="more_phone_numbers">
+        <reference-many target-document="Doctrine\ODM\MongoDB\Tests\Mapping\Phonenumber" field-name="morePhoneNumbers" field="more_phone_numbers">
         </reference-many>
-        <embed-one target-document="Phonenumber" fieldName="embeddedPhonenumber" field="embedded_phone_number">
+        <embed-one target-document="Doctrine\ODM\MongoDB\Tests\Mapping\Phonenumber" field-name="embeddedPhonenumber" field="embedded_phone_number">
         </embed-one>
-        <embed-many target-document="Phonenumber" collection-class="PhonenumberCollection" field="otherPhonenumbers">
+        <embed-many target-document="Doctrine\ODM\MongoDB\Tests\Mapping\Phonenumber" collection-class="Doctrine\ODM\MongoDB\Tests\Mapping\PhonenumberCollection" field="otherPhonenumbers">
             <discriminator-field name="discr" />
             <discriminator-map>
-                <discriminator-mapping value="home" class="HomePhonenumber" />
-                <discriminator-mapping value="work" class="WorkPhonenumber" />
+                <discriminator-mapping value="home" class="Doctrine\ODM\MongoDB\Tests\Mapping\HomePhonenumber" />
+                <discriminator-mapping value="work" class="Doctrine\ODM\MongoDB\Tests\Mapping\WorkPhonenumber" />
             </discriminator-map>
             <default-discriminator-value value="home" />
         </embed-many>

@@ -1,14 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class IndexesTest extends BaseTest
 {
     private function uniqueTest($class)
     {
-        $class = __NAMESPACE__.'\\'.$class;
         $this->dm->getSchemaManager()->ensureDocumentIndexes($class);
 
         $test = new $class();
@@ -33,7 +35,7 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testEmbeddedIndexes()
     {
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\DocumentWithEmbeddedIndexes');
+        $class = $this->dm->getClassMetadata(DocumentWithEmbeddedIndexes::class);
         $sm = $this->dm->getSchemaManager();
         $indexes = $sm->getDocumentIndexes($class->name);
 
@@ -49,26 +51,26 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertTrue(isset($indexes[3]['keys']['embedded_secondary.embeddedMany.name']));
         $this->assertEquals(1, $indexes[3]['keys']['embedded_secondary.embeddedMany.name']);
     }
-    
+
     public function testDiscriminatedEmbeddedIndexes()
     {
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\DocumentWithIndexInDiscriminatedEmbeds');
+        $class = $this->dm->getClassMetadata(DocumentWithIndexInDiscriminatedEmbeds::class);
         $sm = $this->dm->getSchemaManager();
         $indexes = $sm->getDocumentIndexes($class->name);
-        
+
         $this->assertTrue(isset($indexes[0]['keys']['embedded.name']));
         $this->assertEquals(1, $indexes[0]['keys']['embedded.name']);
-        
+
         $this->assertTrue(isset($indexes[1]['keys']['embedded.embeddedMany.name']));
         $this->assertEquals(1, $indexes[1]['keys']['embedded.embeddedMany.name']);
-        
+
         $this->assertTrue(isset($indexes[2]['keys']['embedded.value']));
         $this->assertEquals(1, $indexes[2]['keys']['embedded.value']);
     }
 
     public function testDiscriminatorIndexes()
     {
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\DocumentWithDiscriminatorIndex');
+        $class = $this->dm->getClassMetadata(DocumentWithDiscriminatorIndex::class);
         $sm = $this->dm->getSchemaManager();
         $indexes = $sm->getDocumentIndexes($class->name);
 
@@ -78,46 +80,35 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testIndexDefinitions()
     {
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\UniqueOnFieldTest');
-        $indexes = $class->getIndexes();
-        $this->assertTrue(isset($indexes[0]['keys']['username']));
-        $this->assertEquals(1, $indexes[0]['keys']['username']);
-        $this->assertTrue(isset($indexes[0]['options']['unique']));
-        $this->assertEquals(true, $indexes[0]['options']['unique']);
-        $this->assertEquals(true, $indexes[0]['options']['safe']);
-
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\UniqueOnDocumentTest');
+        $class = $this->dm->getClassMetadata(UniqueOnFieldTest::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
         $this->assertTrue(isset($indexes[0]['options']['unique']));
         $this->assertEquals(true, $indexes[0]['options']['unique']);
 
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\IndexesOnDocumentTest');
+        $class = $this->dm->getClassMetadata(UniqueOnDocumentTest::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
         $this->assertTrue(isset($indexes[0]['options']['unique']));
         $this->assertEquals(true, $indexes[0]['options']['unique']);
 
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\PartialIndexOnDocumentTest');
+        $class = $this->dm->getClassMetadata(IndexesOnDocumentTest::class);
+        $indexes = $class->getIndexes();
+        $this->assertTrue(isset($indexes[0]['keys']['username']));
+        $this->assertEquals(1, $indexes[0]['keys']['username']);
+        $this->assertTrue(isset($indexes[0]['options']['unique']));
+        $this->assertEquals(true, $indexes[0]['options']['unique']);
+
+        $class = $this->dm->getClassMetadata(PartialIndexOnDocumentTest::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
         $this->assertTrue(isset($indexes[0]['options']['partialFilterExpression']));
-        $this->assertSame(array('counter' => array('$gt' => 5)), $indexes[0]['options']['partialFilterExpression']);
+        $this->assertSame(['counter' => ['$gt' => 5]], $indexes[0]['options']['partialFilterExpression']);
 
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\UniqueSparseOnFieldTest');
-        $indexes = $class->getIndexes();
-        $this->assertTrue(isset($indexes[0]['keys']['username']));
-        $this->assertEquals(1, $indexes[0]['keys']['username']);
-        $this->assertTrue(isset($indexes[0]['options']['unique']));
-        $this->assertEquals(true, $indexes[0]['options']['unique']);
-        $this->assertEquals(true, $indexes[0]['options']['safe']);
-        $this->assertTrue(isset($indexes[0]['options']['sparse']));
-        $this->assertEquals(true, $indexes[0]['options']['sparse']);
-
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\UniqueSparseOnDocumentTest');
+        $class = $this->dm->getClassMetadata(UniqueSparseOnFieldTest::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
@@ -126,7 +117,7 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertTrue(isset($indexes[0]['options']['sparse']));
         $this->assertEquals(true, $indexes[0]['options']['sparse']);
 
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\SparseIndexesOnDocumentTest');
+        $class = $this->dm->getClassMetadata(UniqueSparseOnDocumentTest::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
@@ -135,7 +126,16 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertTrue(isset($indexes[0]['options']['sparse']));
         $this->assertEquals(true, $indexes[0]['options']['sparse']);
 
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\MultipleFieldsUniqueIndexTest');
+        $class = $this->dm->getClassMetadata(SparseIndexesOnDocumentTest::class);
+        $indexes = $class->getIndexes();
+        $this->assertTrue(isset($indexes[0]['keys']['username']));
+        $this->assertEquals(1, $indexes[0]['keys']['username']);
+        $this->assertTrue(isset($indexes[0]['options']['unique']));
+        $this->assertEquals(true, $indexes[0]['options']['unique']);
+        $this->assertTrue(isset($indexes[0]['options']['sparse']));
+        $this->assertEquals(true, $indexes[0]['options']['sparse']);
+
+        $class = $this->dm->getClassMetadata(MultipleFieldsUniqueIndexTest::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
@@ -144,7 +144,7 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertTrue(isset($indexes[0]['options']['unique']));
         $this->assertEquals(true, $indexes[0]['options']['unique']);
 
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\MultipleFieldsUniqueSparseIndexTest');
+        $class = $this->dm->getClassMetadata(MultipleFieldsUniqueSparseIndexTest::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
@@ -155,7 +155,7 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertTrue(isset($indexes[0]['options']['sparse']));
         $this->assertEquals(true, $indexes[0]['options']['sparse']);
 
-        $class = $this->dm->getClassMetadata(__NAMESPACE__.'\MultipleFieldIndexes');
+        $class = $this->dm->getClassMetadata(MultipleFieldIndexes::class);
         $indexes = $class->getIndexes();
         $this->assertTrue(isset($indexes[0]['keys']['username']));
         $this->assertEquals(1, $indexes[0]['keys']['username']);
@@ -170,55 +170,60 @@ class IndexesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     }
 
     /**
-     * @expectedException MongoCursorException
+     * @expectedException \MongoDB\Driver\Exception\BulkWriteException
+     * @expectedExceptionMessage duplicate key error collection
      */
     public function testUniqueIndexOnField()
     {
-        $this->uniqueTest('UniqueOnFieldTest');
+        $this->uniqueTest(UniqueOnFieldTest::class);
     }
 
     /**
-     * @expectedException MongoCursorException
+     * @expectedException \MongoDB\Driver\Exception\BulkWriteException
+     * @expectedExceptionMessage duplicate key error collection
      */
     public function testUniqueIndexOnDocument()
     {
-        $this->uniqueTest('UniqueOnDocumentTest');
+        $this->uniqueTest(UniqueOnDocumentTest::class);
     }
 
     /**
-     * @expectedException MongoCursorException
+     * @expectedException \MongoDB\Driver\Exception\BulkWriteException
+     * @expectedExceptionMessage duplicate key error collection
      */
     public function testIndexesOnDocument()
     {
-        $this->uniqueTest('IndexesOnDocumentTest');
+        $this->uniqueTest(IndexesOnDocumentTest::class);
     }
 
     /**
-     * @expectedException MongoCursorException
+     * @expectedException \MongoDB\Driver\Exception\BulkWriteException
+     * @expectedExceptionMessage duplicate key error collection
      */
     public function testMultipleFieldsUniqueIndexOnDocument()
     {
-        $this->uniqueTest('MultipleFieldsUniqueIndexTest');
+        $this->uniqueTest(MultipleFieldsUniqueIndexTest::class);
     }
 
     /**
-     * @expectedException MongoCursorException
+     * @expectedException \MongoDB\Driver\Exception\BulkWriteException
+     * @expectedExceptionMessage duplicate key error collection
      */
     public function testMultipleFieldIndexes()
     {
-        $this->uniqueTest('MultipleFieldIndexes');
+        $this->uniqueTest(MultipleFieldIndexes::class);
     }
 
     public function testPartialIndexCreation()
     {
         $this->requireMongoDB32('This test is not applicable to server versions < 3.2.0');
 
-        $className = __NAMESPACE__ . '\PartialIndexOnDocumentTest';
+        $className = PartialIndexOnDocumentTest::class;
         $this->dm->getSchemaManager()->ensureDocumentIndexes($className);
 
         $indexes = $this->dm->getSchemaManager()->getDocumentIndexes($className);
-        $this->assertFalse(empty($indexes[0]['options']['partialFilterExpression']));
-        $this->assertSame(array('counter' => array('$gt' => 5)), $indexes[0]['options']['partialFilterExpression']);
+        $this->assertNotEmpty($indexes[0]['options']['partialFilterExpression']);
+        $this->assertSame(['counter' => ['$gt' => 5]], $indexes[0]['options']['partialFilterExpression']);
         $this->assertTrue($indexes[0]['options']['unique']);
     }
 }
@@ -229,7 +234,7 @@ class UniqueOnFieldTest
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\Field(type="string") @ODM\UniqueIndex(safe=true) */
+    /** @ODM\Field(type="string") @ODM\UniqueIndex() */
     public $username;
 
     /** @ODM\Field(type="string") */
@@ -297,7 +302,7 @@ class UniqueSparseOnFieldTest
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\Field(type="string") @ODM\UniqueIndex(safe=true, sparse=true) */
+    /** @ODM\Field(type="string") @ODM\UniqueIndex(sparse=true) */
     public $username;
 
     /** @ODM\Field(type="string") */
@@ -365,10 +370,10 @@ class DocumentWithEmbeddedIndexes
     /** @ODM\Field(type="string") */
     public $name;
 
-    /** @ODM\EmbedOne(targetDocument="EmbeddedDocumentWithIndexes") */
+    /** @ODM\EmbedOne(targetDocument=EmbeddedDocumentWithIndexes::class) */
     public $embedded;
 
-    /** @ODM\EmbedOne(targetDocument="EmbeddedDocumentWithIndexes") */
+    /** @ODM\EmbedOne(targetDocument=EmbeddedDocumentWithIndexes::class) */
     public $embedded_secondary;
 }
 
@@ -389,7 +394,7 @@ class EmbeddedDocumentWithIndexes
     /** @ODM\Field(type="string") @ODM\Index */
     public $name;
 
-    /** @ODM\EmbedMany(targetDocument="EmbeddedManyDocumentWithIndexes") */
+    /** @ODM\EmbedMany(targetDocument=EmbeddedManyDocumentWithIndexes::class) */
     public $embeddedMany;
 }
 
@@ -412,13 +417,13 @@ class DocumentWithIndexInDiscriminatedEmbeds
 {
     /** @ODM\Id */
     public $id;
-    
-    /** 
+
+    /**
      * @ODM\EmbedOne(
      *  discriminatorMap={
-     *   "d1"="EmbeddedDocumentWithIndexes",
-     *   "d2"="YetAnotherEmbeddedDocumentWithIndex",
-     * }) 
+     *   "d1"=EmbeddedDocumentWithIndexes::class,
+     *   "d2"=YetAnotherEmbeddedDocumentWithIndex::class,
+     * })
      */
     public $embedded;
 }

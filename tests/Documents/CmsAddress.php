@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -12,55 +14,53 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
  */
 class CmsAddress
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     public $id;
 
-    /**
-     * @ODM\Field(type="string")
-     */
+    /** @ODM\Field(type="string") */
     public $country;
 
-    /**
-     * @ODM\Field(type="string")
-     */
+    /** @ODM\Field(type="string") */
     public $zip;
 
-    /**
-     * @ODM\Field(type="string")
-     */
+    /** @ODM\Field(type="string") */
     public $city;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="CmsUser")
-     */
+    /** @ODM\ReferenceOne(targetDocument=CmsUser::class) */
     public $user;
 
-    public function getId() {
+    public function getId()
+    {
         return $this->id;
     }
-    
-    public function getUser() {
+
+    public function getUser()
+    {
         return $this->user;
     }
 
-    public function getCountry() {
+    public function getCountry()
+    {
         return $this->country;
     }
 
-    public function getZipCode() {
+    public function getZipCode()
+    {
         return $this->zip;
     }
 
-    public function getCity() {
+    public function getCity()
+    {
         return $this->city;
     }
-    
-    public function setUser(CmsUser $user) {
-        if ($this->user !== $user) {
-            $this->user = $user;
-            $user->setAddress($this);
+
+    public function setUser(CmsUser $user)
+    {
+        if ($this->user === $user) {
+            return;
         }
+
+        $this->user = $user;
+        $user->setAddress($this);
     }
 }

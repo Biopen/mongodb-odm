@@ -61,7 +61,7 @@ Persistent Models
 To make the above classes persistent, all we need to do is provide Doctrine with some mapping
 information so that it knows how to consume the objects and persist them to the database.
 
-You can provide your mapping information in Annotations, XML, or YAML:
+You can provide your mapping information in Annotations or XML:
 
 .. configuration-block::
 
@@ -82,7 +82,7 @@ You can provide your mapping information in Annotations, XML, or YAML:
             /** @ODM\Field(type="string") */
             private $email;
 
-            /** @ODM\ReferenceMany(targetDocument="BlogPost", cascade="all") */
+            /** @ODM\ReferenceMany(targetDocument=BlogPost::class, cascade="all") */
             private $posts = array();
 
             // ...
@@ -114,7 +114,7 @@ You can provide your mapping information in Annotations, XML, or YAML:
                         xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
                         http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
           <document name="Documents\User">
-                <field fieldName="id" id="true" />
+                <id />
                 <field fieldName="name" type="string" />
                 <field fieldName="email" type="string" />
                 <reference-many fieldName="posts" targetDocument="Documents\BlogPost">
@@ -131,40 +131,12 @@ You can provide your mapping information in Annotations, XML, or YAML:
                         xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
                         http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
           <document name="Documents\BlogPost">
-                <field fieldName="id" id="true" />
+                <id />
                 <field fieldName="title" type="string" />
                 <field fieldName="body" type="string" />
                 <field fieldName="createdAt" type="date" />
           </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        Documents\User:
-          fields:
-            id:
-              type: id
-              id: true
-            name:
-              type: string
-            email:
-              type: string
-          referenceMany:
-            posts:
-              targetDocument: Documents\BlogPost
-              cascade: all
-
-        Documents\BlogPost:
-          fields:
-            id:
-              type: id
-              id: true
-            title:
-              type: string
-            body:
-              type: string
-            createdAt:
-              type: date
 
 That’s it, we have our models, and we can save and retrieve them. Now
 all we need to do is to properly instantiate the ``DocumentManager``
@@ -175,12 +147,15 @@ instance. Read more about setting up the Doctrine MongoDB ODM in the
 
     <?php
 
+    use Doctrine\Common\Annotations\AnnotationRegistry;
     use Doctrine\MongoDB\Connection;
     use Doctrine\ODM\MongoDB\Configuration;
     use Doctrine\ODM\MongoDB\DocumentManager;
     use Doctrine\ODM\MongoDB\Mapping\Driver\AnnotationDriver;
 
-    AnnotationDriver::registerAnnotationClasses();
+    $loader = require_once('path/to/vendor/autoload.php');
+
+    AnnotationRegistry::registerLoader([$loader, 'loadClass']);
 
     $config = new Configuration();
     $config->setProxyDir('/path/to/generate/proxies');
@@ -238,7 +213,7 @@ stored in MongoDB in correct collections and databases. You can use the
         [_id] => 4bec5869fdc212081d000000
         [title] => My First Blog Post
         [body] => MongoDB + Doctrine 2 ODM = awesomeness!
-        [createdAt] => MongoDate Object
+        [createdAt] => MongoDB\BSON\UTCDateTime Object
             (
                 [sec] => 1273723200
                 [usec] => 0
@@ -282,7 +257,7 @@ Or you can find the user by name even:
 
     <?php
 
-    $user = $dm->getRepository('User')->findOneByName('Bulat S.');
+    $user = $dm->getRepository('User')->findOneBy(array('name' => 'Bulat S.'));
 
 If you want to iterate over the posts the user references it is as easy as the following:
 

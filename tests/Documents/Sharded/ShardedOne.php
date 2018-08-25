@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents\Sharded;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -18,4 +20,7 @@ class ShardedOne
 
     /** @ODM\Field(name="k", type="string") */
     public $key = 'testing';
+
+    /** @ODM\ReferenceOne(targetDocument=ShardedUser::class) */
+    public $user;
 }

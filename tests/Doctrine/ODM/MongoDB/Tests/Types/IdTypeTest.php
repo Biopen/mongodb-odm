@@ -1,39 +1,42 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Types;
 
 use Doctrine\ODM\MongoDB\Types\Type;
+use MongoDB\BSON\ObjectId;
+use PHPUnit\Framework\TestCase;
 
-class IdTypeTest extends \PHPUnit_Framework_TestCase
+class IdTypeTest extends TestCase
 {
     public function testConvertToDatabaseValue()
     {
-        $mongoId = new \MongoId();
+        $identifier = new ObjectId();
         $type = Type::getType('id');
 
         $this->assertNull($type->convertToDatabaseValue(null), 'null is not converted');
-        $this->assertSame($mongoId, $type->convertToDatabaseValue($mongoId), 'MongoId objects are not converted');
-        $this->assertEquals($mongoId, $type->convertToDatabaseValue((string) $mongoId), 'ObjectId strings are converted to MongoId objects');
+        $this->assertSame($identifier, $type->convertToDatabaseValue($identifier), 'ObjectId objects are not converted');
+        $this->assertEquals($identifier, $type->convertToDatabaseValue((string) $identifier), 'ObjectId strings are converted to ObjectId objects');
     }
 
     /**
-     * @dataProvider provideInvalidMongoIdConstructorArguments
+     * @dataProvider provideInvalidObjectIdConstructorArguments
      */
-    public function testConvertToDatabaseValueShouldGenerateMongoIds($value)
+    public function testConvertToDatabaseValueShouldGenerateObjectIds($value)
     {
         $type = Type::getType('id');
 
-        $this->assertInstanceOf('MongoId', $type->convertToDatabaseValue($value));
+        $this->assertInstanceOf(ObjectId::class, $type->convertToDatabaseValue($value));
     }
 
-    public function provideInvalidMongoIdConstructorArguments()
+    public function provideInvalidObjectIdConstructorArguments()
     {
-        return array(
-            'integer' => array(1),
-            'float'   => array(3.14),
-            'string'  => array('string'),
-            'bool'    => array(true),
-            'object'  => array(array('x' => 1, 'y' => 2)),
-        );
+        return [
+            'integer' => [1],
+            'float'   => [3.14],
+            'string'  => ['string'],
+            'bool'    => [true],
+        ];
     }
 }

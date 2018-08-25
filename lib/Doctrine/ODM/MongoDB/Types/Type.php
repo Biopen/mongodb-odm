@@ -1,65 +1,54 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Types;
 
 use Doctrine\ODM\MongoDB\Mapping\MappingException;
 use Doctrine\ODM\MongoDB\Types;
+use MongoDB\BSON\ObjectId;
+use function end;
+use function explode;
+use function get_class;
+use function gettype;
+use function is_object;
+use function sprintf;
+use function str_replace;
 
 /**
  * The Type interface.
- *
- * @since       1.0
  */
 abstract class Type
 {
-    const ID = 'id';
-    const INTID = 'int_id';
-    const CUSTOMID = 'custom_id';
-    const BOOL = 'bool';
-    const BOOLEAN = 'boolean';
-    const INT = 'int';
-    const INTEGER = 'integer';
-    const FLOAT = 'float';
-    const STRING = 'string';
-    const DATE = 'date';
-    const KEY = 'key';
-    const TIMESTAMP = 'timestamp';
-    const BINDATA = 'bin';
-    const BINDATAFUNC = 'bin_func';
-    const BINDATABYTEARRAY = 'bin_bytearray';
-    const BINDATAUUID = 'bin_uuid';
-    const BINDATAUUIDRFC4122 = 'bin_uuid_rfc4122';
-    const BINDATAMD5 = 'bin_md5';
-    const BINDATACUSTOM = 'bin_custom';
-    const FILE = 'file';
-    const HASH = 'hash';
-    const COLLECTION = 'collection';
-    const INCREMENT = 'increment';
-    const OBJECTID = 'object_id';
-    const RAW = 'raw';
+    public const ID = 'id';
+    public const INTID = 'int_id';
+    public const CUSTOMID = 'custom_id';
+    public const BOOL = 'bool';
+    public const BOOLEAN = 'boolean';
+    public const INT = 'int';
+    public const INTEGER = 'integer';
+    public const FLOAT = 'float';
+    public const STRING = 'string';
+    public const DATE = 'date';
+    public const KEY = 'key';
+    public const TIMESTAMP = 'timestamp';
+    public const BINDATA = 'bin';
+    public const BINDATAFUNC = 'bin_func';
+    public const BINDATABYTEARRAY = 'bin_bytearray';
+    public const BINDATAUUID = 'bin_uuid';
+    public const BINDATAUUIDRFC4122 = 'bin_uuid_rfc4122';
+    public const BINDATAMD5 = 'bin_md5';
+    public const BINDATACUSTOM = 'bin_custom';
+    public const HASH = 'hash';
+    public const COLLECTION = 'collection';
+    public const OBJECTID = 'object_id';
+    public const RAW = 'raw';
 
-    /** Map of already instantiated type objects. One instance per type (flyweight). */
-    private static $typeObjects = array();
+    /** @var Type[] Map of already instantiated type objects. One instance per type (flyweight). */
+    private static $typeObjects = [];
 
-    /** The map of supported doctrine mapping types. */
-    private static $typesMap = array(
+    /** @var string[] The map of supported doctrine mapping types. */
+    private static $typesMap = [
         self::ID => Types\IdType::class,
         self::INTID => Types\IntIdType::class,
         self::CUSTOMID => Types\CustomIdType::class,
@@ -79,16 +68,16 @@ abstract class Type
         self::BINDATAUUIDRFC4122 => Types\BinDataUUIDRFC4122Type::class,
         self::BINDATAMD5 => Types\BinDataMD5Type::class,
         self::BINDATACUSTOM => Types\BinDataCustomType::class,
-        self::FILE => Types\FileType::class,
         self::HASH => Types\HashType::class,
         self::COLLECTION => Types\CollectionType::class,
-        self::INCREMENT => Types\IncrementType::class,
         self::OBJECTID => Types\ObjectIdType::class,
         self::RAW => Types\RawType::class,
-    );
+    ];
 
-    /* Prevent instantiation and force use of the factory method. */
-    final private function __construct() {}
+    /** Prevent instantiation and force use of the factory method. */
+    final private function __construct()
+    {
+    }
 
     /**
      * Converts a value from its PHP representation to its database representation
@@ -114,23 +103,20 @@ abstract class Type
         return $value;
     }
 
-    public function closureToMongo()
+    public function closureToMongo(): string
     {
         return '$return = $value;';
     }
 
-    public function closureToPHP()
+    public function closureToPHP(): string
     {
         return '$return = $value;';
     }
 
     /**
      * Register a new type in the type map.
-     *
-     * @param string $name The name of the type.
-     * @param string $class The class name.
      */
-    public static function registerType($name, $class)
+    public static function registerType(string $name, string $class): void
     {
         self::$typesMap[$name] = $class;
     }
@@ -138,18 +124,16 @@ abstract class Type
     /**
      * Get a Type instance.
      *
-     * @param string $type The type name.
-     * @return \Doctrine\ODM\MongoDB\Types\Type $type
      * @throws \InvalidArgumentException
      */
-    public static function getType($type)
+    public static function getType(string $type)
     {
-        if ( ! isset(self::$typesMap[$type])) {
+        if (! isset(self::$typesMap[$type])) {
             throw new \InvalidArgumentException(sprintf('Invalid type specified "%s".', $type));
         }
-        if ( ! isset(self::$typeObjects[$type])) {
+        if (! isset(self::$typeObjects[$type])) {
             $className = self::$typesMap[$type];
-            self::$typeObjects[$type] = new $className;
+            self::$typeObjects[$type] = new $className();
         }
         return self::$typeObjects[$type];
     }
@@ -158,21 +142,22 @@ abstract class Type
      * Get a Type instance based on the type of the passed php variable.
      *
      * @param mixed $variable
-     * @return \Doctrine\ODM\MongoDB\Types\Type $type
      * @throws \InvalidArgumentException
      */
-    public static function getTypeFromPHPVariable($variable)
+    public static function getTypeFromPHPVariable($variable): ?Type
     {
         if (is_object($variable)) {
             if ($variable instanceof \DateTimeInterface) {
                 return self::getType('date');
-            } elseif ($variable instanceof \MongoId) {
+            }
+
+            if ($variable instanceof ObjectId) {
                 return self::getType('id');
             }
         } else {
             $type = gettype($variable);
             switch ($type) {
-                case 'integer';
+                case 'integer':
                     return self::getType('int');
             }
         }
@@ -192,11 +177,9 @@ abstract class Type
      * Adds a custom type to the type map.
      *
      * @static
-     * @param string $name Name of the type. This should correspond to what getName() returns.
-     * @param string $className The class name of the custom type.
      * @throws MappingException
      */
-    public static function addType($name, $className)
+    public static function addType(string $name, string $className): void
     {
         if (isset(self::$typesMap[$name])) {
             throw MappingException::typeExists($name);
@@ -209,10 +192,8 @@ abstract class Type
      * Checks if exists support for a type.
      *
      * @static
-     * @param string $name Name of the type
-     * @return boolean TRUE if type is supported; FALSE otherwise
      */
-    public static function hasType($name)
+    public static function hasType(string $name): bool
     {
         return isset(self::$typesMap[$name]);
     }
@@ -221,13 +202,11 @@ abstract class Type
      * Overrides an already defined type to use a different implementation.
      *
      * @static
-     * @param string $name
-     * @param string $className
      * @throws MappingException
      */
-    public static function overrideType($name, $className)
+    public static function overrideType(string $name, string $className): void
     {
-        if ( ! isset(self::$typesMap[$name])) {
+        if (! isset(self::$typesMap[$name])) {
             throw MappingException::typeNotFound($name);
         }
 
@@ -237,10 +216,8 @@ abstract class Type
     /**
      * Get the types array map which holds all registered types and the corresponding
      * type class
-     *
-     * @return array $typesMap
      */
-    public static function getTypesMap()
+    public static function getTypesMap(): array
     {
         return self::$typesMap;
     }

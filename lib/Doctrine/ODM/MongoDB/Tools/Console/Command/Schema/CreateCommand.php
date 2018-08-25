@@ -1,33 +1,24 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Tools\Console\Command\Schema;
 
+use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
 use Doctrine\ODM\MongoDB\SchemaManager;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use function array_filter;
+use function sprintf;
+use function ucfirst;
 
 class CreateCommand extends AbstractCommand
 {
-    private $createOrder = array(self::DB, self::COLLECTION, self::INDEX);
+    /** @var string[] */
+    private $createOrder = [self::COLLECTION, self::INDEX];
 
+    /** @var int|null */
     private $timeout;
 
     protected function configure()
@@ -36,7 +27,6 @@ class CreateCommand extends AbstractCommand
             ->setName('odm:schema:create')
             ->addOption('class', 'c', InputOption::VALUE_REQUIRED, 'Document class to process (default: all classes)')
             ->addOption('timeout', 't', InputOption::VALUE_OPTIONAL, 'Timeout (ms) for acknowledged index creation')
-            ->addOption(self::DB, null, InputOption::VALUE_NONE, 'Create databases')
             ->addOption(self::COLLECTION, null, InputOption::VALUE_NONE, 'Create collections')
             ->addOption(self::INDEX, null, InputOption::VALUE_NONE, 'Create indexes')
             ->setDescription('Create databases, collections and indexes for your documents')
@@ -45,15 +35,9 @@ class CreateCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if ($input->getOption(self::DB)) {
-            @trigger_error('The ' . self::DB . ' option is deprecated and will be removed in ODM 2.0', E_USER_DEPRECATED);
-        }
-
-        foreach ($this->createOrder as $option) {
-            if ($input->getOption($option)) {
-                $create[] = $option;
-            }
-        }
+        $create = array_filter($this->createOrder, function ($option) use ($input) {
+            return $input->getOption($option);
+        });
 
         // Default to the full creation order if no options were specified
         $create = empty($create) ? $this->createOrder : $create;
@@ -76,10 +60,10 @@ class CreateCommand extends AbstractCommand
                 $output->writeln(sprintf(
                     'Created <comment>%s%s</comment> for <info>%s</info>',
                     $option,
-                    (isset($class) ? (self::INDEX === $option ? '(es)' : '') : (self::INDEX === $option ? 'es' : 's')),
-                    (isset($class) ? $class : 'all classes')
+                    (isset($class) ? ($option === self::INDEX ? '(es)' : '') : ($option === self::INDEX ? 'es' : 's')),
+                    $class ?? 'all classes'
                 ));
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $output->writeln('<error>' . $e->getMessage() . '</error>');
                 $isErrored = true;
             }
@@ -100,12 +84,12 @@ class CreateCommand extends AbstractCommand
 
     protected function processDocumentDb(SchemaManager $sm, $document)
     {
-        $sm->createDocumentDatabase($document);
+        throw new \BadMethodCallException('A database is created automatically by MongoDB (>= 3.0).');
     }
 
     protected function processDb(SchemaManager $sm)
     {
-        $sm->createDatabases();
+        throw new \BadMethodCallException('A database is created automatically by MongoDB (>= 3.0).');
     }
 
     protected function processDocumentIndex(SchemaManager $sm, $document)
@@ -120,11 +104,21 @@ class CreateCommand extends AbstractCommand
 
     protected function processDocumentProxy(SchemaManager $sm, $document)
     {
-        $this->getDocumentManager()->getProxyFactory()->generateProxyClasses(array($this->getMetadataFactory()->getMetadataFor($document)));
+        $classMetadata = $this->getMetadataFactory()->getMetadataFor($document);
+
+        if ($classMetadata->isEmbeddedDocument || $classMetadata->isMappedSuperclass || $classMetadata->isQueryResultDocument) {
+            return;
+        }
+
+        $this->getDocumentManager()->getProxyFactory()->generateProxyClasses([$classMetadata]);
     }
 
     protected function processProxy(SchemaManager $sm)
     {
-        $this->getDocumentManager()->getProxyFactory()->generateProxyClasses($this->getMetadataFactory()->getAllMetadata());
+        $classes = array_filter($this->getMetadataFactory()->getAllMetadata(), function (ClassMetadata $classMetadata) {
+            return ! $classMetadata->isEmbeddedDocument && ! $classMetadata->isMappedSuperclass && ! $classMetadata->isQueryResultDocument;
+        });
+
+        $this->getDocumentManager()->getProxyFactory()->generateProxyClasses($classes);
     }
 }

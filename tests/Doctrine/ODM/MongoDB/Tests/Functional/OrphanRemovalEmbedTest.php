@@ -1,13 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Repository\DocumentRepository;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
 /**
  * Test the orphan removal on embedded documents that contain references with cascade operations.
  */
-class OrphanRemovalEmbedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class OrphanRemovalEmbedTest extends BaseTest
 {
     /**
      * Test unsetting an embedOne relationship
@@ -57,7 +61,6 @@ class OrphanRemovalEmbedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $user->profileMany->removeElement($profile1);
 
         $this->dm->flush();
-        $this->dm->clear($user);
 
         $user = $this->getUserRepository()->find($user->id);
         $this->assertNotNull($user, 'Should retrieve user');
@@ -90,7 +93,7 @@ class OrphanRemovalEmbedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $user->profileMany->clear();
 
         $this->dm->flush();
-        $this->dm->clear($user);
+        $this->dm->clear(OrphanRemovalCascadeUser::class);
 
         $this->assertNull($this->getAddressRepository()->find($address1->id), 'Should have removed address 1');
         $this->assertNull($this->getAddressRepository()->find($address2->id), 'Should have removed address 2');
@@ -124,7 +127,6 @@ class OrphanRemovalEmbedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $user->profileMany->add($profile3);
 
         $this->dm->flush();
-        $this->dm->clear($user);
 
         $user = $this->getUserRepository()->find($user->id);
         $this->assertNotNull($user, 'Should retrieve user');
@@ -137,19 +139,19 @@ class OrphanRemovalEmbedTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     }
 
     /**
-     * @return \Doctrine\ODM\MongoDB\DocumentRepository
+     * @return DocumentRepository
      */
     private function getUserRepository()
     {
-        return $this->dm->getRepository('Doctrine\ODM\MongoDB\Tests\Functional\OrphanRemovalCascadeUser');
+        return $this->dm->getRepository(OrphanRemovalCascadeUser::class);
     }
 
     /**
-     * @return \Doctrine\ODM\MongoDB\DocumentRepository
+     * @return DocumentRepository
      */
     private function getAddressRepository()
     {
-        return $this->dm->getRepository('Doctrine\ODM\MongoDB\Tests\Functional\OrphanRemovalCascadeAddress');
+        return $this->dm->getRepository(OrphanRemovalCascadeAddress::class);
     }
 }
 
@@ -159,11 +161,11 @@ class OrphanRemovalCascadeUser
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedOne(targetDocument="OrphanRemovalCascadeProfile") */
+    /** @ODM\EmbedOne(targetDocument=OrphanRemovalCascadeProfile::class) */
     public $profile;
 
-    /** @ODM\EmbedMany(targetDocument="OrphanRemovalCascadeProfile") */
-    public $profileMany = array();
+    /** @ODM\EmbedMany(targetDocument=OrphanRemovalCascadeProfile::class) */
+    public $profileMany = [];
 }
 
 /** @ODM\EmbeddedDocument */
@@ -175,10 +177,10 @@ class OrphanRemovalCascadeProfile
     /** @ODM\Field(type="string") */
     public $name;
 
-    /** @ODM\ReferenceOne(targetDocument="OrphanRemovalCascadeAddress", orphanRemoval=true, cascade={"all"}) */
+    /** @ODM\ReferenceOne(targetDocument=OrphanRemovalCascadeAddress::class, orphanRemoval=true, cascade={"all"}) */
     public $address;
 
-    /** @ODM\ReferenceMany(targetDocument="OrphanRemovalCascadeAddress", orphanRemoval=true, cascade={"all"}) */
+    /** @ODM\ReferenceMany(targetDocument=OrphanRemovalCascadeAddress::class, orphanRemoval=true, cascade={"all"}) */
     public $addressMany;
 }
 

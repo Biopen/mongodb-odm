@@ -1,10 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Mapping\Driver;
 
-use Doctrine\ODM\MongoDB\Mapping\ClassMetadataInfo;
-use Doctrine\ODM\MongoDB\Mapping\Driver\XmlDriver;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
+use Doctrine\ODM\MongoDB\Mapping\Driver\XmlDriver;
+use Doctrine\ODM\MongoDB\Mapping\MappingException;
+use TestDocuments\CustomIdGenerator;
+use TestDocuments\InvalidPartialFilterDocument;
+use TestDocuments\UserCustomIdGenerator;
+use TestDocuments\UserNonStringOptions;
 
 class XmlDriverTest extends AbstractDriverTest
 {
@@ -15,15 +21,15 @@ class XmlDriverTest extends AbstractDriverTest
 
     public function testDriverShouldReturnOptionsForCustomIdGenerator()
     {
-        $classMetadata = new ClassMetadata('TestDocuments\UserCustomIdGenerator');
-        $this->driver->loadMetadataForClass('TestDocuments\UserCustomIdGenerator', $classMetadata);
-        $this->assertEquals(array(
+        $classMetadata = new ClassMetadata(UserCustomIdGenerator::class);
+        $this->driver->loadMetadataForClass(UserCustomIdGenerator::class, $classMetadata);
+        $this->assertEquals([
             'fieldName' => 'id',
             'strategy' => 'custom',
-            'options' => array(
-                'class' => 'TestDocuments\CustomIdGenerator',
-                'someOption' => 'some-option'
-            ),
+            'options' => [
+                'class' => CustomIdGenerator::class,
+                'someOption' => 'some-option',
+            ],
             'id' => true,
             'name' => '_id',
             'type' => 'custom_id',
@@ -34,48 +40,34 @@ class XmlDriverTest extends AbstractDriverTest
             'isCascadeRemove' => false,
             'isInverseSide' => false,
             'isOwningSide' => true,
-            'nullable' => false
-        ), $classMetadata->fieldMappings['id']);
+            'nullable' => false,
+        ], $classMetadata->fieldMappings['id']);
     }
 
     public function testDriverShouldParseNonStringAttributes()
     {
-        $classMetadata = new ClassMetadata('TestDocuments\UserNonStringOptions');
-        $this->driver->loadMetadataForClass('TestDocuments\UserNonStringOptions', $classMetadata);
-
-        $this->assertSame(true, $classMetadata->requireIndexes);
-        $this->assertSame(false, $classMetadata->slaveOkay);
+        $classMetadata = new ClassMetadata(UserNonStringOptions::class);
+        $this->driver->loadMetadataForClass(UserNonStringOptions::class, $classMetadata);
 
         $profileMapping = $classMetadata->fieldMappings['profile'];
-        $this->assertSame(ClassMetadataInfo::REFERENCE_STORE_AS_ID, $profileMapping['storeAs']);
-        $this->assertSame(true, $profileMapping['orphanRemoval']);
+        $this->assertSame(ClassMetadata::REFERENCE_STORE_AS_ID, $profileMapping['storeAs']);
+        $this->assertTrue($profileMapping['orphanRemoval']);
 
         $profileMapping = $classMetadata->fieldMappings['groups'];
-        $this->assertSame(ClassMetadataInfo::REFERENCE_STORE_AS_DB_REF_WITH_DB, $profileMapping['storeAs']);
-        $this->assertSame(false, $profileMapping['orphanRemoval']);
+        $this->assertSame(ClassMetadata::REFERENCE_STORE_AS_DB_REF, $profileMapping['storeAs']);
+        $this->assertFalse($profileMapping['orphanRemoval']);
         $this->assertSame(0, $profileMapping['limit']);
         $this->assertSame(2, $profileMapping['skip']);
     }
 
     public function testInvalidPartialFilterExpressions()
     {
-        $classMetadata = new ClassMetadata('TestDocuments\InvalidPartialFilterDocument');
-        $this->driver->loadMetadataForClass('TestDocuments\InvalidPartialFilterDocument', $classMetadata);
+        $classMetadata = new ClassMetadata(InvalidPartialFilterDocument::class);
 
-        $this->assertEquals([
-            [
-                'keys' => ['fieldA' => 1],
-                'options' => [
-                    'partialFilterExpression' => [
-                        '$and' => [['discr' => ['$eq' => 'default']]],
-                    ],
-                ],
-            ],
-            [
-                'keys' => ['fieldB' => 1],
-                'options' => [],
-            ],
-        ], $classMetadata->getIndexes());
+        $this->expectException(MappingException::class);
+        $this->expectExceptionMessageRegExp('#The mapping file .+ is invalid#');
+
+        $this->driver->loadMetadataForClass(InvalidPartialFilterDocument::class, $classMetadata);
     }
 }
 
@@ -92,4 +84,3 @@ class UserNonStringOptions
     protected $profile;
     protected $groups;
 }
-

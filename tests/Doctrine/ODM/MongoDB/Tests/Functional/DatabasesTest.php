@@ -1,19 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class DatabasesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class DatabasesTest extends BaseTest
 {
     public function testCustomDatabase()
     {
-        $this->assertEquals('test_custom', $this->dm->getDocumentDatabase(__NAMESPACE__ . '\CustomDatabaseTest')->getName());
+        $this->assertEquals('test_custom', $this->dm->getDocumentDatabase(CustomDatabaseTest::class)->getDatabaseName());
     }
 
     public function testDefaultDatabase()
     {
-        $this->assertEquals('test_default', $this->dm->getDocumentDatabase(__NAMESPACE__ . '\DefaultDatabaseTest')->getName());
+        $this->assertEquals('test_default', $this->dm->getDocumentDatabase(DefaultDatabaseTest::class)->getDatabaseName());
     }
 
     protected function getConfiguration()

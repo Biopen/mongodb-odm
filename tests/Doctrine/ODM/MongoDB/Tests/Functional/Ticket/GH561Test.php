@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH561Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH561Test extends BaseTest
 {
     public function testPersistMainDocument()
     {
@@ -19,16 +22,16 @@ class GH561Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $document = $this->dm->find(__NAMESPACE__.'\GH561Document', $document->id);
-        $this->assertInstanceOf(__NAMESPACE__.'\GH561Document', $document);
+        $document = $this->dm->find(GH561Document::class, $document->id);
+        $this->assertInstanceOf(GH561Document::class, $document);
         $this->assertCount(1, $document->embeddedDocuments);
 
         $embeddedDocument = $document->embeddedDocuments->first();
-        $this->assertInstanceOf(__NAMESPACE__.'\GH561EmbeddedDocument', $embeddedDocument);
+        $this->assertInstanceOf(GH561EmbeddedDocument::class, $embeddedDocument);
         $this->assertCount(1, $embeddedDocument->embeddedDocuments);
 
         $anotherEmbeddedDocument = $embeddedDocument->embeddedDocuments->first();
-        $this->assertInstanceOf(__NAMESPACE__.'\GH561AnotherEmbeddedDocument', $anotherEmbeddedDocument);
+        $this->assertInstanceOf(GH561AnotherEmbeddedDocument::class, $anotherEmbeddedDocument);
         $this->assertEquals('foo', $anotherEmbeddedDocument->name);
     }
 }
@@ -39,7 +42,7 @@ class GH561Document
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedMany(targetDocument="GH561EmbeddedDocument", strategy="set") */
+    /** @ODM\EmbedMany(targetDocument=GH561EmbeddedDocument::class, strategy="set") */
     public $embeddedDocuments;
 
     public function __construct()
@@ -51,7 +54,7 @@ class GH561Document
 /** @ODM\EmbeddedDocument */
 class GH561EmbeddedDocument
 {
-    /** @ODM\EmbedMany(targetDocument="GH561AnotherEmbeddedDocument", strategy="set") */
+    /** @ODM\EmbedMany(targetDocument=GH561AnotherEmbeddedDocument::class, strategy="set") */
     public $embeddedDocuments;
 
     public function __construct()

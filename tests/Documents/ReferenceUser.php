@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -11,52 +13,71 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
  */
 class ReferenceUser
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     public $id;
 
     /**
-     * @ODM\ReferenceOne(targetDocument="Documents\User", storeAs="id")
+     * @ODM\ReferenceOne(targetDocument=User::class, storeAs="id")
      *
      * @var User
      */
     public $user;
 
     /**
-     * @ODM\ReferenceMany(targetDocument="Documents\User", storeAs="id")
+     * @ODM\ReferenceMany(targetDocument=User::class, storeAs="id")
      *
      * @var User[]
      */
-    public $users = array();
+    public $users = [];
 
     /**
-     * @ODM\ReferenceOne(targetDocument="Documents\User", storeAs="dbRef")
+     * @ODM\ReferenceOne(targetDocument=User::class, storeAs="dbRef")
      *
      * @var User
      */
     public $parentUser;
 
     /**
-     * @ODM\ReferenceMany(targetDocument="Documents\User", storeAs="dbRef")
+     * @ODM\ReferenceMany(targetDocument=User::class, storeAs="dbRef")
      *
      * @var User[]
      */
-    public $parentUsers = array();
+    public $parentUsers = [];
 
     /**
-     * @ODM\ReferenceOne(targetDocument="Documents\User", storeAs="dbRefWithDb")
+     * @ODM\ReferenceOne(targetDocument=User::class, storeAs="dbRefWithDb")
      *
      * @var User
      */
     public $otherUser;
 
     /**
-     * @ODM\ReferenceMany(targetDocument="Documents\User", storeAs="dbRefWithDb")
+     * @ODM\ReferenceMany(targetDocument=User::class, storeAs="dbRefWithDb")
      *
      * @var User[]
      */
-    public $otherUsers = array();
+    public $otherUsers = [];
+
+    /**
+     * @ODM\ReferenceOne(targetDocument=User::class, storeAs="ref")
+     *
+     * @var User
+     */
+    public $referencedUser;
+
+    /**
+     * @ODM\ReferenceMany(targetDocument=User::class, storeAs="ref")
+     *
+     * @var User[]
+     */
+    public $referencedUsers = [];
+
+    /**
+     * @ODM\EmbedMany(targetDocument="Documents\IndirectlyReferencedUser")
+     *
+     * @var IndirectlyReferencedUser[]
+     */
+    public $indirectlyReferencedUsers = [];
 
     /**
      * @ODM\Field(type="string")
@@ -65,9 +86,6 @@ class ReferenceUser
      */
     public $name;
 
-    /**
-     * @param User $user
-     */
     public function setUser(User $user)
     {
         $this->user = $user;
@@ -81,9 +99,6 @@ class ReferenceUser
         return $this->user;
     }
 
-    /**
-     * @param User $user
-     */
     public function addUser(User $user)
     {
         $this->users[] = $user;
@@ -97,9 +112,6 @@ class ReferenceUser
         return $this->users;
     }
 
-    /**
-     * @param User $parentUser
-     */
     public function setParentUser(User $parentUser)
     {
         $this->parentUser = $parentUser;
@@ -113,9 +125,6 @@ class ReferenceUser
         return $this->parentUser;
     }
 
-    /**
-     * @param User $parentUser
-     */
     public function addParentUser(User $parentUser)
     {
         $this->parentUsers[] = $parentUser;
@@ -129,9 +138,6 @@ class ReferenceUser
         return $this->parentUsers;
     }
 
-    /**
-     * @param User $otherUser
-     */
     public function setOtherUser(User $otherUser)
     {
         $this->otherUser = $otherUser;
@@ -145,9 +151,6 @@ class ReferenceUser
         return $this->otherUser;
     }
 
-    /**
-     * @param User $otherUser
-     */
     public function addOtherUser(User $otherUser)
     {
         $this->otherUsers[] = $otherUser;
@@ -159,6 +162,32 @@ class ReferenceUser
     public function getOtherUsers()
     {
         return $this->otherUsers;
+    }
+
+    public function setReferencedUser(User $referencedUser)
+    {
+        $this->referencedUser = $referencedUser;
+    }
+
+    /**
+     * @return User
+     */
+    public function getreferencedUser()
+    {
+        return $this->referencedUser;
+    }
+
+    public function addReferencedUser(User $referencedUser)
+    {
+        $this->referencedUsers[] = $referencedUser;
+    }
+
+    /**
+     * @return User[]
+     */
+    public function getReferencedUsers()
+    {
+        return $this->referencedUsers;
     }
 
     /**

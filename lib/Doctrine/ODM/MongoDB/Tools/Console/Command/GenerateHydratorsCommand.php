@@ -1,33 +1,25 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Tools\Console\Command;
 
+use Doctrine\ODM\MongoDB\Tools\Console\MetadataFilter;
+use Symfony\Component\Console;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console;
-use Doctrine\ODM\MongoDB\Tools\Console\MetadataFilter;
+use const PHP_EOL;
+use function count;
+use function file_exists;
+use function is_dir;
+use function is_writable;
+use function mkdir;
+use function realpath;
+use function sprintf;
 
 /**
  * Command to (re)generate the hydrator classes used by doctrine.
  *
- * @since   1.0
  */
 class GenerateHydratorsCommand extends Console\Command\Command
 {
@@ -39,16 +31,19 @@ class GenerateHydratorsCommand extends Console\Command\Command
         $this
         ->setName('odm:generate:hydrators')
         ->setDescription('Generates hydrator classes for document classes.')
-        ->setDefinition(array(
+        ->setDefinition([
             new InputOption(
-                'filter', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+                'filter',
+                null,
+                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
                 'A string pattern used to match documents that should be processed.'
             ),
             new InputArgument(
-                'dest-path', InputArgument::OPTIONAL,
+                'dest-path',
+                InputArgument::OPTIONAL,
                 'The path to generate your hydrator classes. If none is provided, it will attempt to grab from configuration.'
             ),
-        ))
+        ])
         ->setHelp(<<<EOT
 Generates hydrator classes for document classes.
 EOT
@@ -61,26 +56,27 @@ EOT
     protected function execute(Console\Input\InputInterface $input, Console\Output\OutputInterface $output)
     {
         $dm = $this->getHelper('documentManager')->getDocumentManager();
-        
+
         $metadatas = $dm->getMetadataFactory()->getAllMetadata();
         $metadatas = MetadataFilter::filter($metadatas, $input->getOption('filter'));
+        $destPath = $input->getArgument('dest-path');
 
         // Process destination directory
-        if (($destPath = $input->getArgument('dest-path')) === null) {
+        if ($destPath === null) {
             $destPath = $dm->getConfiguration()->getHydratorDir();
         }
 
-        if ( ! is_dir($destPath)) {
+        if (! is_dir($destPath)) {
             mkdir($destPath, 0775, true);
         }
 
         $destPath = realpath($destPath);
 
-        if ( ! file_exists($destPath)) {
+        if (! file_exists($destPath)) {
             throw new \InvalidArgumentException(
                 sprintf("Hydrators destination directory '<info>%s</info>' does not exist.", $destPath)
             );
-        } elseif ( ! is_writable($destPath)) {
+        } elseif (! is_writable($destPath)) {
             throw new \InvalidArgumentException(
                 sprintf("Hydrators destination directory '<info>%s</info>' does not have write permissions.", $destPath)
             );

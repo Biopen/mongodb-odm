@@ -1,33 +1,19 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Tools\Console\Command;
 
 use Doctrine\Common\Util\Debug;
+use Symfony\Component\Console;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console;
+use function is_numeric;
+use function json_decode;
 
 /**
  * Command to query mongodb and inspect the outputted results from your document classes.
  *
- * @since   1.0
  */
 class QueryCommand extends Console\Command\Command
 {
@@ -39,32 +25,43 @@ class QueryCommand extends Console\Command\Command
         $this
         ->setName('odm:query')
         ->setDescription('Query mongodb and inspect the outputted results from your document classes.')
-        ->setDefinition(array(
+        ->setDefinition([
             new InputArgument(
-                'class', InputArgument::REQUIRED,
+                'class',
+                InputArgument::REQUIRED,
                 'The class to query.'
             ),
             new InputArgument(
-                'query', InputArgument::REQUIRED,
+                'query',
+                InputArgument::REQUIRED,
                 'The query to execute and output the results for.'
             ),
             new InputOption(
-                'hydrate', null, InputOption::VALUE_NONE,
+                'hydrate',
+                null,
+                InputOption::VALUE_NONE,
                 'Whether or not to hydrate the results in to document objects.'
             ),
             new InputOption(
-                'skip', null, InputOption::VALUE_REQUIRED,
+                'skip',
+                null,
+                InputOption::VALUE_REQUIRED,
                 'The number of documents to skip in the cursor.'
             ),
             new InputOption(
-                'limit', null, InputOption::VALUE_REQUIRED,
+                'limit',
+                null,
+                InputOption::VALUE_REQUIRED,
                 'The number of documents to return.'
             ),
             new InputOption(
-                'depth', null, InputOption::VALUE_REQUIRED,
-                'Dumping depth of Document graph.', 7
-            )
-        ))
+                'depth',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Dumping depth of Document graph.',
+                7
+            ),
+        ])
         ->setHelp(<<<EOT
 Execute a query and output the results.
 EOT
@@ -83,20 +80,22 @@ EOT
 
         $depth = $input->getOption('depth');
 
-        if ( ! is_numeric($depth)) {
+        if (! is_numeric($depth)) {
             throw new \LogicException("Option 'depth' must contain an integer value");
         }
 
-        if (($skip = $input->getOption('skip')) !== null) {
-            if ( ! is_numeric($skip)) {
+        $skip = $input->getOption('skip');
+        if ($skip !== null) {
+            if (! is_numeric($skip)) {
                 throw new \LogicException("Option 'skip' must contain an integer value");
             }
 
             $qb->skip((int) $skip);
         }
 
-        if (($limit = $input->getOption('limit')) !== null) {
-            if ( ! is_numeric($limit)) {
+        $limit = $input->getOption('limit');
+        if ($limit !== null) {
+            if (! is_numeric($limit)) {
                 throw new \LogicException("Option 'limit' must contain an integer value");
             }
 

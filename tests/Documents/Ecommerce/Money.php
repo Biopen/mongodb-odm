@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents\Ecommerce;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -7,14 +9,10 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 /** @ODM\EmbeddedDocument */
 class Money
 {
-    /**
-     * @ODM\Field(type="float")
-     */
+    /** @ODM\Field(type="float") */
     protected $amount;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="Documents\Ecommerce\Currency", cascade="all")
-     */
+    /** @ODM\ReferenceOne(targetDocument="Documents\Ecommerce\Currency", cascade="all") */
     protected $currency;
 
     public function __construct($amount, Currency $currency)

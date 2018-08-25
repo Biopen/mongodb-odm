@@ -1,42 +1,36 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Types;
+
+use MongoDB\BSON\Timestamp;
+use function explode;
+use function substr;
 
 /**
  * The Timestamp type.
  *
- * @since       1.0
  */
 class TimestampType extends Type
 {
     public function convertToDatabaseValue($value)
     {
-        if ($value instanceof \MongoTimestamp) {
+        if ($value instanceof Timestamp) {
             return $value;
         }
 
-        return $value !== null ? new \MongoTimestamp($value) : null;
+        return $value !== null ? new Timestamp(0, $value) : null;
     }
 
     public function convertToPHPValue($value)
     {
-        return $value !== null ? (string) $value : null;
+        return $value instanceof Timestamp ? $this->extractSeconds($value) : ($value !== null ? (string) $value : null);
+    }
+
+    private function extractSeconds(Timestamp $timestamp): int
+    {
+            $parts = explode(':', substr((string) $timestamp, 1, -1));
+            return (int) $parts[1];
     }
 }

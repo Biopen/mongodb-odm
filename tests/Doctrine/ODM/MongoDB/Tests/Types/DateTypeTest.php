@@ -1,10 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Types;
 
 use Doctrine\ODM\MongoDB\Types\Type;
+use MongoDB\BSON\UTCDateTime;
+use PHPUnit\Framework\TestCase;
+use const PHP_INT_SIZE;
+use function call_user_func;
+use function date;
+use function strtotime;
 
-class DateTypeTest extends \PHPUnit_Framework_TestCase
+class DateTypeTest extends TestCase
 {
     public function testGetDateTime()
     {
@@ -14,7 +22,7 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
         $dateTime = $type->getDateTime($timestamp);
         $this->assertEquals($timestamp, $dateTime->format('U.u'));
 
-        $mongoDate = new \MongoDate(100000000, 1000);
+        $mongoDate = new UTCDateTime(100000000001);
         $dateTime = $type->getDateTime($mongoDate);
         $this->assertEquals($timestamp, $dateTime->format('U.u'));
     }
@@ -25,12 +33,12 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
 
         $this->assertNull($type->convertToDatabaseValue(null), 'null is not converted');
 
-        $mongoDate = new \MongoDate();
+        $mongoDate = new UTCDateTime();
         $this->assertSame($mongoDate, $type->convertToDatabaseValue($mongoDate), 'MongoDate objects are not converted');
 
         $timestamp = 100000000.123;
-        $dateTime = \DateTime::createFromFormat('U.u', $timestamp);
-        $mongoDate = new \MongoDate(100000000, 123000);
+        $dateTime = \DateTime::createFromFormat('U.u', (string) $timestamp);
+        $mongoDate = new UTCDateTime(100000000123);
         $this->assertEquals($mongoDate, $type->convertToDatabaseValue($dateTime), 'DateTime objects are converted to MongoDate objects');
         $this->assertEquals($mongoDate, $type->convertToDatabaseValue($timestamp), 'Numeric timestamps are converted to MongoDate objects');
         $this->assertEquals($mongoDate, $type->convertToDatabaseValue('' . $timestamp), 'String dates are converted to MongoDate objects');
@@ -40,16 +48,12 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
 
     public function testConvertDateTimeImmutable()
     {
-        if (! class_exists('DateTimeImmutable')) {
-            $this->markTestSkipped('DateTimeImmutable class does not exist in your PHP version');
-        }
-
         $type = Type::getType(Type::DATE);
 
         $timestamp = 100000000.123;
-        $mongoDate = new \MongoDate(100000000, 123000);
+        $mongoDate = new UTCDateTime(100000000123);
 
-        $dateTimeImmutable = \DateTimeImmutable::createFromFormat('U.u', $timestamp);
+        $dateTimeImmutable = \DateTimeImmutable::createFromFormat('U.u', (string) $timestamp);
         $this->assertEquals($mongoDate, $type->convertToDatabaseValue($dateTimeImmutable), 'DateTimeImmutable objects are converted to MongoDate objects');
     }
 
@@ -58,7 +62,7 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
         $type = Type::getType(Type::DATE);
 
         $date = new \DateTime('1900-01-01 00:00:00.123', new \DateTimeZone('UTC'));
-        $timestamp = "-2208988800.123";
+        $timestamp = '-2208988800.123';
         $this->assertEquals($type->convertToDatabaseValue($timestamp), $type->convertToDatabaseValue($date));
     }
 
@@ -74,13 +78,13 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
 
     public function provideInvalidDateValues()
     {
-        return array(
-            'array'  => array(array()),
-            'string' => array('whatever'),
-            'bool'   => array(false),
-            'object' => array(new \stdClass()),
-            'invalid string' => array('foo'),
-        );
+        return [
+            'array'  => [[]],
+            'string' => ['whatever'],
+            'bool'   => [false],
+            'object' => [new \stdClass()],
+            'invalid string' => ['foo'],
+        ];
     }
 
     /**
@@ -110,7 +114,7 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
         $type = Type::getType(Type::DATE);
         $return = null;
 
-        call_user_func(function($value) use ($type, &$return) {
+        call_user_func(function ($value) use ($type, &$return) {
             eval($type->closureToPHP());
         }, $input);
 
@@ -121,16 +125,16 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
     public function provideDatabaseToPHPValues()
     {
         $yesterday = strtotime('yesterday');
-        $mongoDate = new \MongoDate($yesterday);
+        $mongoDate = new UTCDateTime($yesterday * 1000);
         $dateTime = new \DateTime('@' . $yesterday);
 
-        return array(
-            array($dateTime, $dateTime),
-            array($mongoDate, $dateTime),
-            array($yesterday, $dateTime),
-            array(date('c', $yesterday), $dateTime),
-            array(new \MongoDate(100000000, 123000), \DateTime::createFromFormat('U.u', '100000000.123')),
-        );
+        return [
+            [$dateTime, $dateTime],
+            [$mongoDate, $dateTime],
+            [$yesterday, $dateTime],
+            [date('c', $yesterday), $dateTime],
+            [new UTCDateTime(100000000123), \DateTime::createFromFormat('U.u', '100000000.123')],
+        ];
     }
 
     /**
@@ -138,25 +142,25 @@ class DateTypeTest extends \PHPUnit_Framework_TestCase
      */
     public function test32bit1900Date()
     {
-        if (PHP_INT_SIZE === 4) {
-            $type = Type::getType(Type::DATE);
-            $type->convertToDatabaseValue('1900-01-01');
-        } else {
-            $this->markTestSkipped("Platform is not 32-bit");
+        if (PHP_INT_SIZE !== 4) {
+            $this->markTestSkipped('Platform is not 32-bit');
         }
+
+        $type = Type::getType(Type::DATE);
+        $type->convertToDatabaseValue('1900-01-01');
     }
 
     public function test64bit1900Date()
     {
-        if (PHP_INT_SIZE === 8) {
-            $type = Type::getType(Type::DATE);
-            $return = $type->convertToDatabaseValue('1900-01-01');
-
-            $this->assertInstanceOf('MongoDate', $return);
-            $this->assertEquals(new \MongoDate(strtotime('1900-01-01')), $return);
-        } else {
-            $this->markTestSkipped("Platform is not 64-bit");
+        if (PHP_INT_SIZE !== 8) {
+            $this->markTestSkipped('Platform is not 64-bit');
         }
+
+        $type = Type::getType(Type::DATE);
+        $return = $type->convertToDatabaseValue('1900-01-01');
+
+        $this->assertInstanceOf(UTCDateTime::class, $return);
+        $this->assertEquals(new UTCDateTime(strtotime('1900-01-01') * 1000), $return);
     }
 
     private function assertTimestampEquals(\DateTime $expected, \DateTime $actual)

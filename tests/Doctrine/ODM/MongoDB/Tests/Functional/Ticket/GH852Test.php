@@ -1,9 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Criteria;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Proxy\Proxy;
+use MongoDB\BSON\Binary;
+use function get_class;
 
 class GH852Test extends BaseTest
 {
@@ -41,7 +47,7 @@ class GH852Test extends BaseTest
         $this->assertEquals($idGenerator('parent'), $parent->id);
         $this->assertEquals('parent', $parent->name);
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $parent->refOne);
+        $this->assertInstanceOf(Proxy::class, $parent->refOne);
         $this->assertFalse($parent->refOne->__isInitialized());
         $this->assertEquals($idGenerator('childA'), $parent->refOne->id);
         $this->assertEquals('childA', $parent->refOne->name);
@@ -52,12 +58,12 @@ class GH852Test extends BaseTest
         /* These proxies will be initialized when we first access the collection
          * by DocumentPersister::loadReferenceManyCollectionOwningSide().
          */
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $parent->refMany[0]);
+        $this->assertInstanceOf(Proxy::class, $parent->refMany[0]);
         $this->assertTrue($parent->refMany[0]->__isInitialized());
         $this->assertEquals($idGenerator('childB'), $parent->refMany[0]->id);
         $this->assertEquals('childB', $parent->refMany[0]->name);
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $parent->refMany[1]);
+        $this->assertInstanceOf(Proxy::class, $parent->refMany[1]);
         $this->assertTrue($parent->refMany[1]->__isInitialized());
         $this->assertEquals($idGenerator('childC'), $parent->refMany[1]->id);
         $this->assertEquals('childC', $parent->refMany[1]->name);
@@ -80,19 +86,24 @@ class GH852Test extends BaseTest
         // these lines are relevant for $useKeys = false in DocumentRepository::matching()
         $this->dm->clear();
         $docs = $this->dm->getRepository(get_class($parent))
-                ->matching(new \Doctrine\Common\Collections\Criteria());
+                ->matching(new Criteria());
         $this->assertCount(4, $docs);
     }
 
     public function provideIdGenerators()
     {
-        // MongoBinData::GENERIC may not be defined for driver versions before 1.5.0
-        $binDataType = defined('MongoBinData::GENERIC') ? \MongoBinData::GENERIC : 0;
+        $binDataType = Binary::TYPE_GENERIC;
 
-        return array(
-            array(function($id) { return array('foo' => $id); }),
-            array(function($id) use ($binDataType) { return new \MongoBinData($id, $binDataType); }),
-        );
+        return [
+            [function ($id) {
+                return ['foo' => $id];
+            },
+            ],
+            [function ($id) use ($binDataType) {
+                return new Binary($id, $binDataType);
+            },
+            ],
+        ];
     }
 }
 
@@ -105,14 +116,10 @@ class GH852Document
     /** @ODM\Field(type="string") */
     public $name;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="GH852Document", cascade="all")
-     */
+    /** @ODM\ReferenceOne(targetDocument=GH852Document::class, cascade="all") */
     public $refOne;
 
-    /**
-     * @ODM\ReferenceMany(targetDocument="GH852Document", cascade="all")
-     */
+    /** @ODM\ReferenceMany(targetDocument=GH852Document::class, cascade="all") */
     public $refMany;
 
     public function __construct()

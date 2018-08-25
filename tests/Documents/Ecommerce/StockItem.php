@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents\Ecommerce;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -9,24 +11,16 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
  */
 class StockItem
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     private $id;
 
-    /**
-     * @ODM\Field(type="string")
-     */
+    /** @ODM\Field(type="string") */
     private $name;
 
-    /**
-     * @ODM\Field(type="int")
-     */
+    /** @ODM\Field(type="int") */
     private $inventory;
 
-    /**
-     * @ODM\EmbedOne(targetDocument="Documents\Ecommerce\Money")
-     */
+    /** @ODM\EmbedOne(targetDocument="Documents\Ecommerce\Money") */
     private $cost;
 
     public function getId()
@@ -34,17 +28,19 @@ class StockItem
         return $this->id;
     }
 
-    public function  __construct($name = null, $cost = null, $inventory = null)
+    public function __construct($name = null, $cost = null, $inventory = null)
     {
-        if (null !== $name) {
+        if ($name !== null) {
             $this->setName($name);
         }
-        if (null !== $cost) {
+        if ($cost !== null) {
             $this->setCost($cost);
         }
-        if (null !== $inventory) {
-            $this->setInventory($inventory);
+        if ($inventory === null) {
+            return;
         }
+
+        $this->setInventory($inventory);
     }
 
     public function setName($name)

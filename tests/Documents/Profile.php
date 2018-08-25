@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -16,7 +18,7 @@ class Profile
     /** @ODM\Field */
     private $lastName;
 
-    /** @ODM\ReferenceOne(targetDocument="File", cascade={"all"}) */
+    /** @ODM\ReferenceOne(targetDocument=File::class, cascade={"all"}) */
     private $image;
 
     public function getProfileId()

@@ -1,24 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
+use Doctrine\Common\Persistence\Proxy;
 use Doctrine\ODM\MongoDB\Event\DocumentNotFoundEventArgs;
 use Doctrine\ODM\MongoDB\Events;
-use Documents\Address;
-use Documents\Profile;
-use Documents\ProfileNotify;
-use Documents\Phonenumber;
-use Documents\Account;
-use Documents\Group;
-use Documents\User;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 use Doctrine\ODM\MongoDB\PersistentCollection;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Documents\Account;
+use Documents\Address;
+use Documents\Group;
+use Documents\Phonenumber;
+use Documents\Profile;
+use Documents\ProfileNotify;
+use Documents\User;
+use MongoDB\BSON\Binary;
+use MongoDB\BSON\ObjectId;
+use function get_class;
 
-class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class ReferencesTest extends BaseTest
 {
     public function testManyDeleteReference()
     {
-        $user = new \Documents\User();
+        $user = new User();
 
         $user->addGroup(new Group('Group 1'));
         $user->addGroup(new Group('Group 2'));
@@ -28,7 +35,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')
             ->equals($user->getId());
         $query = $qb->getQuery();
@@ -37,13 +44,11 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->remove($user2);
         $this->dm->flush();
 
-        $qb = $this->dm->createQueryBuilder('Documents\Group');
+        $qb = $this->dm->createQueryBuilder(Group::class);
         $query = $qb->getQuery();
         $groups = $query->execute();
 
-        $count = $groups->count();
-
-        $this->assertEquals(0, $count);
+        $this->assertCount(0, $groups->toArray());
     }
 
     public function testLazyLoadReference()
@@ -59,7 +64,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId());
         $query = $qb->getQuery();
 
@@ -67,7 +72,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $profile = $user->getProfile();
 
-        $this->assertTrue($profile instanceof \Proxies\__CG__\Documents\Profile);
+        $this->assertInstanceOf(\Proxies\__CG__\Documents\Profile::class, $profile);
 
         $profile->getFirstName();
 
@@ -88,7 +93,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->clear();
 
         $user = $this->dm->find(get_class($user), $user->getId());
-        $this->assertTrue($user->getProfileNotify() instanceof \Doctrine\Common\Persistence\Proxy);
+        $this->assertInstanceOf(Proxy::class, $user->getProfileNotify());
         $this->assertFalse($user->getProfileNotify()->__isInitialized());
 
         $user->getProfileNotify()->setLastName('Malarz');
@@ -119,7 +124,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId());
         $query = $qb->getQuery();
         $user2 = $query->getSingleResult();
@@ -128,7 +133,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testManyEmbedded()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->addPhonenumber(new Phonenumber('6155139185'));
         $user->addPhonenumber(new Phonenumber('6153303769'));
 
@@ -136,7 +141,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId());
         $query = $qb->getQuery();
         $user2 = $query->getSingleResult();
@@ -155,20 +160,20 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->persist($user);
         $this->dm->flush();
 
-        $this->dm->flush();
         $this->dm->clear();
 
-        $accountId = $user->getAccount()->getId();
+        $this->assertNotNull($user->getAccount()->getId());
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId());
         $query = $qb->getQuery();
         $user2 = $query->getSingleResult();
+        $this->assertInstanceOf(User::class, $user2);
     }
 
     public function testManyReference()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->addGroup(new Group('Group 1'));
         $user->addGroup(new Group('Group 2'));
 
@@ -177,12 +182,12 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $groups = $user->getGroups();
 
-        $this->assertTrue($groups instanceof PersistentCollection);
-        $this->assertTrue($groups[0]->getId() !== '');
-        $this->assertTrue($groups[1]->getId() !== '');
+        $this->assertInstanceOf(PersistentCollection::class, $groups);
+        $this->assertNotSame('', $groups[0]->getId());
+        $this->assertNotSame('', $groups[1]->getId());
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')
             ->equals($user->getId());
         $query = $qb->getQuery();
@@ -191,16 +196,16 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertFalse($groups->isInitialized());
 
         $groups->count();
-        $this->assertFalse($groups->isInitialized());
+        $this->assertTrue($groups->isInitialized());
 
         $groups->isEmpty();
-        $this->assertFalse($groups->isInitialized());
+        $this->assertTrue($groups->isInitialized());
 
         $groups = $user2->getGroups();
 
-        $this->assertTrue($groups instanceof PersistentCollection);
-        $this->assertTrue($groups[0] instanceof Group);
-        $this->assertTrue($groups[1] instanceof Group);
+        $this->assertInstanceOf(PersistentCollection::class, $groups);
+        $this->assertInstanceOf(Group::class, $groups[0]);
+        $this->assertInstanceOf(Group::class, $groups[1]);
 
         $this->assertTrue($groups->isInitialized());
 
@@ -210,16 +215,16 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId());
         $query = $qb->getQuery();
         $user3 = $query->getSingleResult();
         $groups = $user3->getGroups();
 
         $this->assertEquals('test', $groups[0]->getName());
-        $this->assertEquals(1, count($groups));
+        $this->assertCount(1, $groups);
     }
-    
+
     public function testFlushInitializesEmptyPersistentCollection()
     {
         $user = new User();
@@ -228,7 +233,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->getRepository('Documents\User')->find($user->getId());
+        $user = $this->dm->getRepository(User::class)->find($user->getId());
 
         $user->addGroup(new Group('Group 1'));
         $user->addGroup(new Group('Group 2'));
@@ -249,8 +254,8 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->persist($user);
         $this->dm->flush();
         $this->dm->clear();
-        
-        $user = $this->dm->getRepository('Documents\User')->find($user->getId());
+
+        $user = $this->dm->getRepository(User::class)->find($user->getId());
 
         $user->addGroup(new Group('Group 1'));
         $user->addGroup(new Group('Group 2'));
@@ -265,7 +270,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testManyReferenceWithAddToSetStrategy()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->addUniqueGroup($group1 = new Group('Group 1'));
         $user->addUniqueGroup($group1);
         $user->addUniqueGroup(new Group('Group 2'));
@@ -274,14 +279,14 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
 
         $groups = $user->getUniqueGroups();
-        $this->assertEquals(3, count($groups));
+        $this->assertCount(3, $groups);
 
-        $this->assertTrue($groups instanceof PersistentCollection);
-        $this->assertTrue($groups[0]->getId() !== '');
-        $this->assertTrue($groups[1]->getId() !== '');
+        $this->assertInstanceOf(PersistentCollection::class, $groups);
+        $this->assertNotSame('', $groups[0]->getId());
+        $this->assertNotSame('', $groups[1]->getId());
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')
             ->equals($user->getId());
         $query = $qb->getQuery();
@@ -290,16 +295,16 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertFalse($groups->isInitialized());
 
         $groups->count();
-        $this->assertFalse($groups->isInitialized());
+        $this->assertTrue($groups->isInitialized());
 
         $groups->isEmpty();
-        $this->assertFalse($groups->isInitialized());
+        $this->assertTrue($groups->isInitialized());
 
-        $this->assertEquals(2, count($groups));
+        $this->assertCount(2, $groups);
 
-        $this->assertTrue($groups instanceof PersistentCollection);
-        $this->assertTrue($groups[0] instanceof Group);
-        $this->assertTrue($groups[1] instanceof Group);
+        $this->assertInstanceOf(PersistentCollection::class, $groups);
+        $this->assertInstanceOf(Group::class, $groups[0]);
+        $this->assertInstanceOf(Group::class, $groups[1]);
 
         $this->assertTrue($groups->isInitialized());
 
@@ -309,19 +314,19 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId());
         $query = $qb->getQuery();
         $user3 = $query->getSingleResult();
         $groups = $user3->getUniqueGroups();
 
         $this->assertEquals('test', $groups[0]->getName());
-        $this->assertEquals(1, count($groups));
+        $this->assertCount(1, $groups);
     }
 
     public function testSortReferenceManyOwningSide()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->addGroup(new Group('Group 1'));
         $user->addGroup(new Group('Group 2'));
 
@@ -352,7 +357,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     {
         $test = new DocumentWithArrayReference();
         $test->referenceOne = new DocumentWithArrayId();
-        $test->referenceOne->id = array('identifier' => 1);
+        $test->referenceOne->id = ['identifier' => 1];
 
         $this->dm->persist($test);
         $this->dm->persist($test->referenceOne);
@@ -361,11 +366,13 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $collection = $this->dm->getDocumentCollection(get_class($test));
 
-        $collection->update(
-            array('_id' => new \MongoId($test->id)),
-            array('$set' => array(
-                'referenceOne.$id' => array('identifier' => 2),
-            ))
+        $collection->updateOne(
+            ['_id' => new ObjectId($test->id)],
+            [
+            '$set' => [
+                'referenceOne.$id' => ['identifier' => 2],
+            ],
+            ]
         );
 
         $test = $this->dm->find(get_class($test), $test->id);
@@ -376,7 +383,7 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
      * @expectedException \Doctrine\ODM\MongoDB\DocumentNotFoundException
      * @expectedExceptionMessage The "Proxies\__CG__\Documents\Profile" document with identifier "abcdefabcdefabcdefabcdef" could not be found.
      */
-    public function testDocumentNotFoundExceptionWithMongoId()
+    public function testDocumentNotFoundExceptionWithObjectId()
     {
         $profile = new Profile();
         $user = new User();
@@ -389,13 +396,13 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $collection = $this->dm->getDocumentCollection(get_class($user));
 
-        $invalidId = new \MongoId('abcdefabcdefabcdefabcdef');
+        $invalidId = new ObjectId('abcdefabcdefabcdefabcdef');
 
-        $collection->update(
-            array('_id' => new \MongoId($user->getId())),
-            array('$set' => array(
-                'profile.$id' => $invalidId,
-            ))
+        $collection->updateOne(
+            ['_id' => new ObjectId($user->getId())],
+            [
+            '$set' => ['profile.$id' => $invalidId],
+            ]
         );
 
         $user = $this->dm->find(get_class($user), $user->getId());
@@ -420,13 +427,13 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $collection = $this->dm->getDocumentCollection(get_class($test));
 
-        $invalidBinData = new \MongoBinData('testbindata', \MongoBinData::BYTE_ARRAY);
+        $invalidBinData = new Binary('testbindata', Binary::TYPE_OLD_BINARY);
 
-        $collection->update(
-            array('_id' => new \MongoId($test->id)),
-            array('$set' => array(
-                'referenceOne.$id' => $invalidBinData,
-            ))
+        $collection->updateOne(
+            ['_id' => new ObjectId($test->id)],
+            [
+            '$set' => ['referenceOne.$id' => $invalidBinData],
+            ]
         );
 
         $test = $this->dm->find(get_class($test), $test->id);
@@ -446,13 +453,13 @@ class ReferencesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $collection = $this->dm->getDocumentCollection(get_class($user));
 
-        $invalidId = new \MongoId('abcdefabcdefabcdefabcdef');
+        $invalidId = new ObjectId('abcdefabcdefabcdefabcdef');
 
-        $collection->update(
-            array('_id' => new \MongoId($user->getId())),
-            array('$set' => array(
-                'profile.$id' => $invalidId,
-            ))
+        $collection->updateOne(
+            ['_id' => new ObjectId($user->getId())],
+            [
+            '$set' => ['profile.$id' => $invalidId],
+            ]
         );
 
         $user = $this->dm->find(get_class($user), $user->getId());
@@ -476,7 +483,7 @@ class DocumentWithArrayReference
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceOne(targetDocument="DocumentWithArrayId") */
+    /** @ODM\ReferenceOne(targetDocument=DocumentWithArrayId::class) */
     public $referenceOne;
 }
 
@@ -494,7 +501,7 @@ class DocumentWithMongoBinDataReference
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceOne(targetDocument="DocumentWithMongoBinDataId") */
+    /** @ODM\ReferenceOne(targetDocument=DocumentWithMongoBinDataId::class) */
     public $referenceOne;
 }
 

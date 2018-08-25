@@ -50,11 +50,6 @@ Example:
           </mapped-superclass>
         </doctrine-mongo-mapping>
 
-    .. code-block:: yaml
-
-        Documents\BaseDocument:
-            type: mappedSuperclass
-
 .. _single_collection_inheritance:
 
 Single Collection Inheritance
@@ -72,7 +67,7 @@ Simple example:
         <?php
 
         namespace Documents;
-    
+
         /**
          * @Document
          * @InheritanceType("SINGLE_COLLECTION")
@@ -83,7 +78,7 @@ Simple example:
         {
             // ...
         }
-    
+
         /**
          * @Document
          */
@@ -117,16 +112,6 @@ Simple example:
           </document>
         </doctrine-mongo-mapping>
 
-    .. code-block:: yaml
-
-        Documents\Person:
-          type: document
-          inheritanceType: SINGLE_COLLECTION
-          discriminatorField: type
-          discriminatorMap:
-            person: Person
-            employee: Employee
-
 The discriminator value allows Doctrine to infer the class name to instantiate
 when hydrating a document. If a discriminator map is used, the discriminator
 value will be used to look up the class name in the map.
@@ -142,7 +127,7 @@ would get an Employee instance back:
     // ...
     $dm->persist($employee);
     $dm->flush();
-    
+
     $employee = $dm->find('Person', $employee->getId()); // instanceof Employee
 
 Even though we queried for a Person, Doctrine will know to return an Employee
@@ -206,17 +191,6 @@ discriminator field:
           </document>
         </doctrine-mongo-mapping>
 
-    .. code-block:: yaml
-
-        Documents\Person:
-          type: document
-          inheritanceType: SINGLE_COLLECTION
-          discriminatorField: type
-          defaultDiscriminatorValue: person
-          discriminatorMap:
-            person: Person
-            employee: Employee
-
 .. _collection_per_class_inheritance:
 
 Collection Per Class Inheritance
@@ -232,7 +206,7 @@ collection and contains all inherited fields:
         <?php
 
         namespace Documents;
-    
+
         /**
          * @Document
          * @InheritanceType("COLLECTION_PER_CLASS")
@@ -241,7 +215,7 @@ collection and contains all inherited fields:
         {
             // ...
         }
-    
+
         /**
          * @Document
          */
@@ -269,12 +243,6 @@ collection and contains all inherited fields:
           <document name="Documents\Employee">
           </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        Documents\Person:
-          type: document
-          inheritanceType: COLLECTION_PER_CLASS
 
 A discriminator is not needed with this type of inheritance since the data is
 separated in different collections.

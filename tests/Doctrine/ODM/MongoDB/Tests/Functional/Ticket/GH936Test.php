@@ -1,12 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
-use Doctrine\ODM\MongoDB\Events;
 use Doctrine\ODM\MongoDB\Event\LifecycleEventArgs;
+use Doctrine\ODM\MongoDB\Events;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Proxy\Proxy;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH936Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH936Test extends BaseTest
 {
     public function testRemoveCascadesThroughProxyDocuments()
     {
@@ -21,29 +25,27 @@ class GH936Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $foo = $this->dm->find(GH936Document::CLASSNAME, $foo->id);
+        $foo = $this->dm->find(GH936Document::class, $foo->id);
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $foo->ref);
+        $this->assertInstanceOf(Proxy::class, $foo->ref);
 
         $this->dm->remove($foo);
         $this->dm->flush();
 
         $this->assertCount(3, $listener->removed);
-        $this->assertNull($this->dm->find(GH936Document::CLASSNAME, $foo->id));
-        $this->assertNull($this->dm->find(GH936Document::CLASSNAME, $bar->id));
-        $this->assertNull($this->dm->find(GH936Document::CLASSNAME, $baz->id));
+        $this->assertNull($this->dm->find(GH936Document::class, $foo->id));
+        $this->assertNull($this->dm->find(GH936Document::class, $bar->id));
+        $this->assertNull($this->dm->find(GH936Document::class, $baz->id));
     }
 }
 
 /** @ODM\Document */
 class GH936Document
 {
-    const CLASSNAME = __CLASS__;
-
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceOne(targetDocument="GH936Document", cascade={"persist","remove"}) */
+    /** @ODM\ReferenceOne(targetDocument=GH936Document::class, cascade={"persist","remove"}) */
     public $ref;
 
     public function __construct($ref = null)
@@ -54,7 +56,7 @@ class GH936Document
 
 class GH936Listener
 {
-    public $removed = array();
+    public $removed = [];
 
     public function postRemove(LifecycleEventArgs $args)
     {

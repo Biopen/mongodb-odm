@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH389Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH389Test extends BaseTest
 {
     public function testDiscriminatorEmptyEmbeddedDocument()
     {
@@ -21,10 +24,10 @@ class GH389Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         unset($rootDocument);
 
         //Get root document
-        $rootDocument = $this->dm->getRepository(__NAMESPACE__ . '\RootDocument')->find($rootDocumentId);
+        $rootDocument = $this->dm->getRepository(RootDocument::class)->find($rootDocumentId);
 
         //Test
-        $this->assertInstanceOf(__NAMESPACE__ . '\EmptyEmbeddedDocument', $rootDocument->getEmptyEmbeddedDocument());
+        $this->assertInstanceOf(EmptyEmbeddedDocument::class, $rootDocument->getEmptyEmbeddedDocument());
     }
 }
 
@@ -34,7 +37,7 @@ class RootDocument
     /** @ODM\Id */
     protected $id;
 
-    /** @ODM\EmbedOne(targetDocument="EmptyMappedSuperClass") */
+    /** @ODM\EmbedOne(targetDocument=EmptyMappedSuperClass::class) */
     protected $emptyEmbeddedDocument;
 
     public function __construct()
@@ -57,7 +60,7 @@ class RootDocument
  * @ODM\MappedSuperClass
  * @ODM\DiscriminatorField("foobar")
  * @ODM\DiscriminatorMap({
- *     "empty"="EmptyEmbeddedDocument"
+ *     "empty"=EmptyEmbeddedDocument::class
  * })
  */
 class EmptyMappedSuperClass

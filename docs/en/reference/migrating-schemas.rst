@@ -87,7 +87,7 @@ before normal hydration.
         public $lastName;
 
         /** @AlsoLoad({"name", "fullName"}) */
-        public function populateFirstAndLastName($fullName)
+        public function populateFirstAndLastName($fullName): void
         {
             list($this->firstName, $this->lastName) = explode(' ', $fullName);
         }
@@ -149,7 +149,7 @@ Later on, you may want to migrate this data into an embedded Address document:
 
         /** @Field(type="string") */
         public $city;
-    
+
         public function __construct($street, $city)
         {
             $this->street = $street;
@@ -165,18 +165,18 @@ Later on, you may want to migrate this data into an embedded Address document:
 
         /** @Field(type="string") */
         public $name;
-    
+
         /** @NotSaved */
         public $street;
-    
+
         /** @NotSaved */
         public $city;
-    
-        /** @EmbedOne(targetDocument="Address") */
+
+        /** @EmbedOne(targetDocument=Address::class) */
         public $address;
-    
+
         /** @PostLoad */
-        public function postLoad()
+        public function postLoad(): void
         {
             if ($this->street !== null || $this->city !== null)
             {
@@ -199,9 +199,9 @@ Alternatively, you could defer this migration until the Person is saved:
     class Person
     {
         // ...
-    
+
         /** @PrePersist */
-        public function prePersist()
+        public function prePersist(): void
         {
             if ($this->street !== null || $this->city !== null)
             {
@@ -214,6 +214,6 @@ The :ref:`haslifecyclecallbacks` annotation must be present on the class in
 which the method is declared for the lifecycle callback to be registered.
 
 .. _`$rename`: https://docs.mongodb.com/manual/reference/operator/update/rename/
-.. _`Objectify`: http://code.google.com/p/objectify-appengine/
-.. _`Objectify schema migration`: http://code.google.com/p/objectify-appengine/wiki/SchemaMigration
+.. _`Objectify`: https://github.com/objectify/objectify
+.. _`Objectify schema migration`: https://github.com/objectify/objectify/wiki/SchemaMigration
 .. _`$or`: https://docs.mongodb.com/manual/reference/operator/query/or/

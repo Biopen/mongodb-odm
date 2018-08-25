@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\PersistentCollection;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH467Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH467Test extends BaseTest
 {
     public function testMergeDocumentWithUnsetCollectionFields()
     {
@@ -17,9 +21,9 @@ class GH467Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $doc = $this->dm->merge($doc);
 
         $this->assertNull($doc->col, 'Unset basic collections are not initialized');
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\PersistentCollection', $doc->embedMany, 'Unset EmbedMany collections are initialized as empty PersistentCollections');
+        $this->assertInstanceOf(PersistentCollection::class, $doc->embedMany, 'Unset EmbedMany collections are initialized as empty PersistentCollections');
         $this->assertCount(0, $doc->embedMany, 'Unset EmbedMany collections are initialized as empty PersistentCollections');
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\PersistentCollection', $doc->refMany, 'Unset ReferenceMany collections are initialized as empty PersistentCollections');
+        $this->assertInstanceOf(PersistentCollection::class, $doc->refMany, 'Unset ReferenceMany collections are initialized as empty PersistentCollections');
         $this->assertCount(0, $doc->refMany, 'Unset ReferenceMany collections are initialized as empty PersistentCollections');
     }
 }
@@ -33,10 +37,10 @@ class GH467Document
     /** @ODM\Field(type="collection") */
     public $col;
 
-    /** @ODM\EmbedMany(targetDocument="GH467EmbeddedDocument") */
+    /** @ODM\EmbedMany(targetDocument=GH467EmbeddedDocument::class) */
     public $embedMany;
 
-    /** @ODM\ReferenceMany(targetDocument="GH467EmbeddedDocument") */
+    /** @ODM\ReferenceMany(targetDocument=GH467EmbeddedDocument::class) */
     public $refMany;
 }
 

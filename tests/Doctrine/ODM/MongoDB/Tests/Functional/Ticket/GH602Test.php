@@ -1,17 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\DocumentNotFoundException;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Proxy\Proxy;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use function iterator_to_array;
 
-class GH602Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH602Test extends BaseTest
 {
     public function testReferenceManyOwningSidePreparesFilterCriteriaForDifferentClass()
     {
-        $thingClass = __NAMESPACE__ . '\GH602Thing';
-        $userClass = __NAMESPACE__ . '\GH602User';
+        $thingClass = GH602Thing::class;
+        $userClass = GH602User::class;
         $this->enableDeletedFilter($thingClass);
 
         $user1 = new GH602User();
@@ -42,25 +47,22 @@ class GH602Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
          */
         $this->assertCount(2, $user1likes);
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $user1likes[0]);
+        $this->assertInstanceOf(Proxy::class, $user1likes[0]);
         $this->assertTrue($user1likes[0]->__isInitialized());
         $this->assertEquals($thing1->getId(), $user1likes[0]->getId());
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $user1likes[1]);
+        $this->assertInstanceOf(Proxy::class, $user1likes[1]);
         $this->assertFalse($user1likes[1]->__isInitialized());
         $this->assertEquals($thing2->getId(), $user1likes[1]->getId());
 
-        try {
-            $user1likes[1]->__load();
-            $this->fail('Expected DocumentNotFoundException for filtered Proxy object');
-        } catch (DocumentNotFoundException $e) {
-        }
+        $this->expectException(DocumentNotFoundException::class);
+        $user1likes[1]->__load();
     }
 
     public function testReferenceManyInverseSidePreparesFilterCriteriaForDifferentClass()
     {
-        $thingClass = __NAMESPACE__ . '\GH602Thing';
-        $userClass = __NAMESPACE__ . '\GH602User';
+        $thingClass = GH602Thing::class;
+        $userClass = GH602User::class;
         $this->enableDeletedFilter($userClass);
 
         $user1 = new GH602User();
@@ -107,7 +109,7 @@ class GH602User
     /** @ODM\Field(name="user_deleted", type="bool") */
     public $deleted = false;
 
-    /** @ODM\ReferenceMany(targetDocument="GH602Thing", inversedBy="likedBy", simple=true) */
+    /** @ODM\ReferenceMany(targetDocument=GH602Thing::class, inversedBy="likedBy", storeAs="id") */
     public $likes;
 
     public function __construct()
@@ -115,7 +117,7 @@ class GH602User
         $this->likes = new ArrayCollection();
     }
 
-    // Return the identifier without triggering Proxy initialization
+    /** Return the identifier without triggering Proxy initialization */
     public function getId()
     {
         return $this->id;
@@ -131,7 +133,7 @@ class GH602Thing
     /** @ODM\Field(name="thing_deleted", type="bool") */
     public $deleted = false;
 
-    /** @ODM\ReferenceMany(targetDocument="GH602User", mappedBy="likes") */
+    /** @ODM\ReferenceMany(targetDocument=GH602User::class, mappedBy="likes") */
     public $likedBy;
 
     public function __construct()
@@ -139,7 +141,7 @@ class GH602Thing
         $this->likedBy = new ArrayCollection();
     }
 
-    // Return the identifier without triggering Proxy initialization
+    /** Return the identifier without triggering Proxy initialization */
     public function getId()
     {
         return $this->id;

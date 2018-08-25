@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH596Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH596Test extends BaseTest
 {
     public function setUp()
     {
@@ -12,14 +15,14 @@ class GH596Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->getFilterCollection()->enable('testFilter');
         $filter = $this->dm->getFilterCollection()->getFilter('testFilter');
-        $filter->setParameter('class', __NAMESPACE__ . '\GH596Document');
+        $filter->setParameter('class', GH596Document::class);
         $filter->setParameter('field', 'deleted');
         $filter->setParameter('value', false);
     }
 
     public function testExpressionPreparationDoesNotInjectFilterCriteria()
     {
-        $class = __NAMESPACE__ . '\GH596Document';
+        $class = GH596Document::class;
 
         $repository = $this->dm->getRepository($class);
         $qb = $repository->createQueryBuilder();
@@ -29,13 +32,17 @@ class GH596Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $query = $qb->getQuery();
         $query = $query->getQuery();
 
-        $expected = array('$and' => array(
-            array('$or' => array(
-                array('name' => 'foo'),
-                array('name' => 'bar'),
-            )),
-            array('deleted' => false),
-        ));
+        $expected = [
+        '$and' => [
+            [
+        '$or' => [
+                ['name' => 'foo'],
+                ['name' => 'bar'],
+            ],
+            ],
+            ['deleted' => false],
+        ],
+        ];
 
         $this->assertEquals($expected, $query['query']);
     }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -27,6 +29,9 @@ class UserUpsert
     /** @ODM\Field(type="int", strategy="increment") */
     public $count;
 
-    /** @ODM\ReferenceMany(targetDocument="Group", cascade={"all"}) */
+    /** @ODM\ReferenceMany(targetDocument=Group::class, cascade={"all"}) */
     public $groups;
+
+    /** @ODM\Field(type="string", nullable=true) */
+    public $nullableField;
 }

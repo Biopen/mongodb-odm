@@ -1,15 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
-class InheritanceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Documents\Developer;
+use Documents\OtherSubProject;
+use Documents\Profile;
+use Documents\Project;
+use Documents\SpecialUser;
+use Documents\SubProject;
+use Documents\User;
+
+class InheritanceTest extends BaseTest
 {
     public function testCollectionPerClassInheritance()
     {
-        $profile = new \Documents\Profile();
+        $profile = new Profile();
         $profile->setFirstName('Jon');
 
-        $user = new \Documents\SpecialUser();
+        $user = new SpecialUser();
         $user->setUsername('specialuser');
         $user->setProfile($profile);
 
@@ -17,10 +28,10 @@ class InheritanceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $this->assertTrue($user->getId() !== '');
-        $this->assertTrue($user->getProfile()->getProfileId() !== '');
+        $this->assertNotSame('', $user->getId());
+        $this->assertNotSame('', $user->getProfile()->getProfileId());
 
-        $qb = $this->dm->createQueryBuilder('Documents\SpecialUser')
+        $qb = $this->dm->createQueryBuilder(SpecialUser::class)
             ->field('id')
             ->equals($user->getId());
         $query = $qb->getQuery();
@@ -33,50 +44,50 @@ class InheritanceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $query = $qb->getQuery();
         $user = $query->getSingleResult();
         $this->assertEquals('Wage', $user->getProfile()->getLastName());
-        $this->assertTrue($user instanceof \Documents\SpecialUser);
+        $this->assertInstanceOf(SpecialUser::class, $user);
     }
 
     public function testSingleCollectionInhertiance()
     {
-        $subProject = new \Documents\SubProject('Sub Project');
+        $subProject = new SubProject('Sub Project');
         $this->dm->persist($subProject);
         $this->dm->flush();
 
-        $coll = $this->dm->getDocumentCollection('Documents\SubProject');
-        $document = $coll->findOne(array('name' => 'Sub Project'));
+        $coll = $this->dm->getDocumentCollection(SubProject::class);
+        $document = $coll->findOne(['name' => 'Sub Project']);
         $this->assertEquals('sub-project', $document['type']);
 
-        $project = new \Documents\OtherSubProject('Other Sub Project');
+        $project = new OtherSubProject('Other Sub Project');
         $this->dm->persist($project);
         $this->dm->flush();
 
-        $coll = $this->dm->getDocumentCollection('Documents\OtherSubProject');
-        $document = $coll->findOne(array('name' => 'Other Sub Project'));
+        $coll = $this->dm->getDocumentCollection(OtherSubProject::class);
+        $document = $coll->findOne(['name' => 'Other Sub Project']);
         $this->assertEquals('other-sub-project', $document['type']);
 
         $this->dm->clear();
 
-        $document = $this->dm->getRepository('Documents\SubProject')->findOneBy(array('name' => 'Sub Project'));
-        $this->assertInstanceOf('Documents\SubProject', $document);
+        $document = $this->dm->getRepository(SubProject::class)->findOneBy(['name' => 'Sub Project']);
+        $this->assertInstanceOf(SubProject::class, $document);
 
-        $document = $this->dm->getRepository('Documents\SubProject')->findOneBy(array('name' => 'Sub Project'));
-        $this->assertInstanceOf('Documents\SubProject', $document);
+        $document = $this->dm->getRepository(SubProject::class)->findOneBy(['name' => 'Sub Project']);
+        $this->assertInstanceOf(SubProject::class, $document);
 
-        $document = $this->dm->getRepository('Documents\Project')->findOneBy(array('name' => 'Sub Project'));
-        $this->assertInstanceOf('Documents\SubProject', $document);
+        $document = $this->dm->getRepository(Project::class)->findOneBy(['name' => 'Sub Project']);
+        $this->assertInstanceOf(SubProject::class, $document);
         $this->dm->clear();
 
         $id = $document->getId();
-        $document = $this->dm->find('Documents\Project', $id);
-        $this->assertInstanceOf('Documents\SubProject', $document);
+        $document = $this->dm->find(Project::class, $id);
+        $this->assertInstanceOf(SubProject::class, $document);
 
-        $document = $this->dm->getRepository('Documents\Project')->findOneBy(array('name' => 'Other Sub Project'));
-        $this->assertInstanceOf('Documents\OtherSubProject', $document);
+        $document = $this->dm->getRepository(Project::class)->findOneBy(['name' => 'Other Sub Project']);
+        $this->assertInstanceOf(OtherSubProject::class, $document);
     }
 
     public function testPrePersistIsCalledFromMappedSuperClass()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->setUsername('test');
         $this->dm->persist($user);
         $this->dm->flush();
@@ -85,25 +96,25 @@ class InheritanceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testInheritanceProxy()
     {
-        $developer = new \Documents\Developer('avalanche123');
+        $developer = new Developer('avalanche123');
 
         $projects = $developer->getProjects();
 
-        $projects->add(new \Documents\Project('Main Project'));
-        $projects->add(new \Documents\SubProject('Sub Project'));
-        $projects->add(new \Documents\OtherSubProject('Another Sub Project'));
+        $projects->add(new Project('Main Project'));
+        $projects->add(new SubProject('Sub Project'));
+        $projects->add(new OtherSubProject('Another Sub Project'));
 
         $this->dm->persist($developer);
         $this->dm->flush();
         $this->dm->clear();
 
-        $developer = $this->dm->find('Documents\Developer', $developer->getId());
+        $developer = $this->dm->find(Developer::class, $developer->getId());
         $projects  = $developer->getProjects();
 
         $this->assertEquals(3, $projects->count());
 
-        $this->assertInstanceOf('Documents\Project', $projects[0]);
-        $this->assertInstanceOf('Documents\SubProject', $projects[1]);
-        $this->assertInstanceOf('Documents\OtherSubProject', $projects[2]);
+        $this->assertInstanceOf(Project::class, $projects[0]);
+        $this->assertInstanceOf(SubProject::class, $projects[1]);
+        $this->assertInstanceOf(OtherSubProject::class, $projects[2]);
     }
 }

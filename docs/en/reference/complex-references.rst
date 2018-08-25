@@ -6,7 +6,7 @@ the inverse side of a relationship.
 
 You can create an `immutable`_ reference to one or many documents and specify
 how that reference is to be loaded. The reference is immutable in that it is
-defined only in the mapping, unlike a typical reference where a `MongoDBRef`_ or
+defined only in the mapping, unlike a typical reference where a ``DBRef`` or
 identifier (see :ref:`storing_references`) is stored on the document itself.
 
 The following options may be used for :ref:`one <reference_one>` and
@@ -35,12 +35,12 @@ querying by the BlogPost's ID.
     {
         // ...
 
-        /** @ReferenceMany(targetDocument="Comment", mappedBy="blogPost") */
+        /** @ReferenceMany(targetDocument=Comment::class, mappedBy="blogPost") */
         private $comments;
 
         /**
          * @ReferenceMany(
-         *      targetDocument="Comment",
+         *      targetDocument=Comment::class,
          *      mappedBy="blogPost",
          *      sort={"date"="desc"},
          *      limit=5
@@ -54,7 +54,7 @@ querying by the BlogPost's ID.
     {
         // ...
 
-        /** @ReferenceOne(targetDocument="BlogPost", inversedBy="comments") */
+        /** @ReferenceOne(targetDocument=BlogPost::class, inversedBy="comments") */
         private $blogPost;
     }
 
@@ -67,13 +67,12 @@ following example:
 
     /**
      * @ReferenceOne(
-     *      targetDocument="Comment",
+     *      targetDocument=Comment::class,
      *      mappedBy="blogPost",
      *      sort={"date"="desc"}
      * )
      */
     private $lastComment;
-
 
 ``criteria`` Example
 --------------------
@@ -88,7 +87,7 @@ administrators:
 
     /**
      * @ReferenceMany(
-     *      targetDocument="Comment",
+     *      targetDocument=Comment::class,
      *      mappedBy="blogPost",
      *      criteria={"isByAdmin" : true}
      * )
@@ -107,7 +106,7 @@ call on the Comment repository class to populate the reference.
 
     /**
      * @ReferenceMany(
-     *      targetDocument="Comment",
+     *      targetDocument=Comment::class,
      *      mappedBy="blogPost",
      *      repositoryMethod="findSomeComments"
      * )
@@ -127,7 +126,7 @@ The ``Comment`` class will need to have a custom repository class configured:
     }
 
 Lastly, the ``CommentRepository`` class will need a ``findSomeComments()``
-method which shall return ``Doctrine\MongoDB\CursorInterface``. When this method
+method which shall return ``Doctrine\ODM\MongoDB\Iterator\Iterator``. When this method
 is called to populate the reference, Doctrine will provide the Blogpost instance
 (i.e. owning document) as the first argument:
 
@@ -135,12 +134,11 @@ is called to populate the reference, Doctrine will provide the Blogpost instance
 
     <?php
 
+    use Doctrine\ODM\MongoDB\Iterator\Iterator;
+
     class CommentRepository extends \Doctrine\ODM\MongoDB\DocumentRepository
     {
-        /**
-         * @return \Doctrine\ODM\MongoDB\Cursor
-         */
-        public function findSomeComments(BlogPost $blogPost)
+        public function findSomeComments(BlogPost $blogPost): Iterator
         {
             return $this->createQueryBuilder()
                 ->field('blogPost')->references($blogPost);
@@ -148,5 +146,4 @@ is called to populate the reference, Doctrine will provide the Blogpost instance
         }
     }
 
-.. _MongoDBRef: http://php.net/manual/en/class.mongodbref.php
 .. _immutable: http://en.wikipedia.org/wiki/Immutable

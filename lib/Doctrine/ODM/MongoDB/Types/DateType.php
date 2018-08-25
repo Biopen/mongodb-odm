@@ -1,28 +1,24 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Types;
+
+use MongoDB\BSON\UTCDateTime;
+use function date_default_timezone_get;
+use function explode;
+use function get_class;
+use function gettype;
+use function is_numeric;
+use function is_scalar;
+use function is_string;
+use function sprintf;
+use function str_pad;
+use function strpos;
 
 /**
  * The Date type.
  *
- * @since       1.0
  */
 class DateType extends Type
 {
@@ -30,47 +26,48 @@ class DateType extends Type
      * Converts a value to a DateTime.
      * Supports microseconds
      *
-     * @throws InvalidArgumentException if $value is invalid
-     * @param  mixed $value \DateTimeInterface|\MongoDate|int|float
-     * @return \DateTime
+     * @throws InvalidArgumentException If $value is invalid.
+     * @param  mixed $value \DateTimeInterface|\MongoDB\BSON\UTCDateTime|int|float
      */
-    public static function getDateTime($value)
+    public static function getDateTime($value): \DateTimeInterface
     {
         $datetime = false;
         $exception = null;
 
         if ($value instanceof \DateTimeInterface) {
             return $value;
-        } elseif ($value instanceof \MongoDate) {
-            $microseconds = str_pad($value->usec, 6, '0', STR_PAD_LEFT); // ensure microseconds
-            $datetime = static::craftDateTime($value->sec, $microseconds);
+        } elseif ($value instanceof UTCDateTime) {
+            $datetime = $value->toDateTime();
+            $datetime->setTimezone(new \DateTimeZone(date_default_timezone_get()));
         } elseif (is_numeric($value)) {
             $seconds = $value;
+            $value = (string) $value;
             $microseconds = 0;
 
-            if (false !== strpos($value, '.')) {
+            if (strpos($value, '.') !== false) {
                 list($seconds, $microseconds) = explode('.', $value);
                 $microseconds = str_pad($microseconds, 6, '0'); // ensure microseconds
             }
 
-            $datetime = static::craftDateTime($seconds, $microseconds);
+            $datetime = static::craftDateTime((int) $seconds, $microseconds);
         } elseif (is_string($value)) {
             try {
                 $datetime = new \DateTime($value);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $exception = $e;
             }
         }
 
         if ($datetime === false) {
-            throw new \InvalidArgumentException(sprintf('Could not convert %s to a date value', is_scalar($value) ? '"'.$value.'"' : gettype($value)), 0, $exception);
+            throw new \InvalidArgumentException(sprintf('Could not convert %s to a date value', is_scalar($value) ? '"' . $value . '"' : gettype($value)), 0, $exception);
         }
 
         return $datetime;
     }
 
-    private static function craftDateTime($seconds, $microseconds = 0)
+    private static function craftDateTime(int $seconds, $microseconds = 0): \DateTime
     {
+        // @todo fix typing for $microseconds
         $datetime = new \DateTime();
         $datetime->setTimestamp($seconds);
         if ($microseconds > 0) {
@@ -82,13 +79,13 @@ class DateType extends Type
 
     public function convertToDatabaseValue($value)
     {
-        if ($value === null || $value instanceof \MongoDate) {
+        if ($value === null || $value instanceof UTCDateTime) {
             return $value;
         }
 
         $datetime = static::getDateTime($value);
 
-        return new \MongoDate($datetime->format('U'), $datetime->format('u'));
+        return new UTCDateTime((int) $datetime->format('Uv'));
     }
 
     public function convertToPHPValue($value)
@@ -100,13 +97,13 @@ class DateType extends Type
         return static::getDateTime($value);
     }
 
-    public function closureToMongo()
+    public function closureToMongo(): string
     {
-        return 'if ($value === null || $value instanceof \MongoDate) { $return = $value; } else { $datetime = \\'.get_class($this).'::getDateTime($value); $return = new \MongoDate($datetime->format(\'U\'), $datetime->format(\'u\')); }';
+        return 'if ($value === null || $value instanceof \MongoDB\BSON\UTCDateTime) { $return = $value; } else { $datetime = \\' . get_class($this) . '::getDateTime($value); $return = new \MongoDB\BSON\UTCDateTime((int) $datetime->format(\'Uv\')); }';
     }
 
-    public function closureToPHP()
+    public function closureToPHP(): string
     {
-        return 'if ($value === null) { $return = null; } else { $return = \\'.get_class($this).'::getDateTime($value); }';
+        return 'if ($value === null) { $return = null; } else { $return = \\' . get_class($this) . '::getDateTime($value); }';
     }
 }

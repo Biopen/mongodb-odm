@@ -22,28 +22,28 @@ named ``Event`` and it was related to a ``User`` document:
     <?php
 
     namespace Documents;
-    
+
     /** @Document */
     class Event
     {
         /** @Id */
         private $id;
-    
-        /** @ReferenceOne(targetDocument="Documents\User") */
+
+        /** @ReferenceOne(targetDocument=User::class) */
         private $user;
-    
+
         /** @Field(type="string") */
         private $type;
-    
+
         /** @Field(type="date") */
         private $date;
-    
+
         /** @Field(type="string") */
         private $description;
-    
+
         // getters and setters
     }
-    
+
     /** @Document */
     class User
     {
@@ -58,7 +58,7 @@ of MongoDB via the ODM's query builder. Here is a simple map reduce example:
 
     <?php
 
-    $qb = $dm->createQueryBuilder('Documents\User')
+    $qb = $dm->createQueryBuilder('Documents\Event')
         ->field('type')
         ->equals('sale')
         ->map('function() { emit(this.user.$id, 1); }')
@@ -93,17 +93,17 @@ PHP driver directly:
 
     $db = $mongoClient->selectDB('my_db');
 
-    $map = new MongoCode('function() { emit(this.user.$id, 1); }');
-    $reduce = new MongoCode('function(k, vals) {
+    $map = new MongoDB\BSON\Javascript('function() { emit(this.user.$id, 1); }');
+    $reduce = new MongoDB\BSON\Javascript('function(k, vals) {
         var sum = 0;
         for (var i in vals) {
-            sum += vals[i]; 
+            sum += vals[i];
         }
         return sum;
     }');
 
     $result = $db->command(array(
-        'mapreduce' => 'events', 
+        'mapreduce' => 'events',
         'map' => $map,
         'reduce' => $reduce,
         'query' => array('type' => 'sale'),

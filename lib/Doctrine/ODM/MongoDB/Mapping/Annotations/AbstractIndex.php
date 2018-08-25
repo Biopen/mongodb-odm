@@ -1,21 +1,6 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Mapping\Annotations;
 
@@ -23,15 +8,33 @@ use Doctrine\Common\Annotations\Annotation;
 
 abstract class AbstractIndex extends Annotation
 {
-    public $keys = array();
+    /** @var string[] */
+    public $keys = [];
+
+    /** @var string */
     public $name;
+
+    /** @var bool|null */
     public $dropDups;
+
+    /** @var bool|null */
     public $background;
-    public $safe;
+
+    /** @var int|null */
     public $expireAfterSeconds;
+
+    /** @var string|int|null */
     public $order;
+
+    /** @var bool */
     public $unique = false;
+
+    /** @var bool */
     public $sparse = false;
-    public $options = array();
-    public $partialFilterExpression = array();
+
+    /** @var mixed[] */
+    public $options = [];
+
+    /** @var array */
+    public $partialFilterExpression = [];
 }

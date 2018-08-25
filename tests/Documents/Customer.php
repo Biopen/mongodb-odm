@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -16,8 +18,6 @@ class Customer
     /** @ODM\Field(name="cart", type="string") */
     public $cartTest;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="Cart", mappedBy="customer")
-     */
+    /** @ODM\ReferenceOne(targetDocument=Cart::class, mappedBy="customer") */
     public $cart;
 }

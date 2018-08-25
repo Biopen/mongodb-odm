@@ -1,22 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
-use Doctrine\ODM\MongoDB\Events;
 use Doctrine\ODM\MongoDB\Event\OnFlushEventArgs;
+use Doctrine\ODM\MongoDB\Events;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Doctrine\ODM\MongoDB\Tests\QueryLogger;
 
-class GH1138Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH1138Test extends BaseTest
 {
-    /**
-     * @var Doctrine\ODM\MongoDB\Tests\QueryLogger
-     */
+    /** @var Doctrine\ODM\MongoDB\Tests\QueryLogger */
     private $ql;
 
     protected function getConfiguration()
     {
-        if ( ! isset($this->ql)) {
+        $this->markTestSkipped('mongodb-driver: query logging does not exist');
+        if (! isset($this->ql)) {
             $this->ql = new QueryLogger();
         }
 
@@ -47,7 +49,7 @@ class GH1138Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 /** @ODM\Document */
 class GH1138Document
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 
     /** @ODM\Id */
     public $id;
@@ -68,11 +70,13 @@ class GH1138Listener
 
         foreach ($uow->getScheduledDocumentInsertions() as $document) {
             $this->inserts++;
-            if ($document instanceof GH1138Document) {
-                $document->name .= '-changed';
-                $cm = $dm->getClassMetadata(GH1138Document::CLASSNAME);
-                $uow->recomputeSingleDocumentChangeSet($cm, $document);
+            if (! ($document instanceof GH1138Document)) {
+                continue;
             }
+
+            $document->name .= '-changed';
+            $cm = $dm->getClassMetadata(GH1138Document::CLASSNAME);
+            $uow->recomputeSingleDocumentChangeSet($cm, $document);
         }
 
         foreach ($uow->getScheduledDocumentUpdates() as $document) {
@@ -80,4 +84,3 @@ class GH1138Listener
         }
     }
 }
-

@@ -1,17 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use MongoDB\BSON\ObjectId;
 
-class GH499Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH499Test extends BaseTest
 {
     public function testSetRefMany()
     {
-        $a = new GH499Document(new \MongoId());
-        $b = new GH499Document(new \MongoId());
-        $c = new GH499Document(new \MongoId());
+        $a = new GH499Document(new ObjectId());
+        $b = new GH499Document(new ObjectId());
+        $c = new GH499Document(new ObjectId());
 
         $a->addRef($b);
         $a->addRef($c);
@@ -22,12 +26,12 @@ class GH499Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $collection = $this->dm->getDocumentCollection(__NAMESPACE__ . '\GH499Document');
+        $collection = $this->dm->getDocumentCollection(GH499Document::class);
 
-        $a = $collection->findOne(array('_id' => new \MongoId($a->getId())));
+        $a = $collection->findOne(['_id' => new ObjectId($a->getId())]);
 
-        $this->assertEquals(new \MongoId($b->getId()), $a['refMany'][$b->getId()]);
-        $this->assertEquals(new \MongoId($c->getId()), $a['refMany'][$c->getId()]);
+        $this->assertEquals(new ObjectId($b->getId()), $a['refMany'][$b->getId()]);
+        $this->assertEquals(new ObjectId($c->getId()), $a['refMany'][$c->getId()]);
     }
 }
 
@@ -37,7 +41,7 @@ class GH499Document
     /** @ODM\Id */
     protected $id;
 
-    /** @ODM\ReferenceMany(targetDocument="GH499Document", simple=true, strategy="set") */
+    /** @ODM\ReferenceMany(targetDocument=GH499Document::class, storeAs="id", strategy="set") */
     protected $refMany;
 
     public function __construct($id = null)

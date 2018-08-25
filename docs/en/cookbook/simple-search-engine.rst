@@ -126,7 +126,7 @@ You can setup a ``Keyword`` document like the following:
         /** @Field(type="int") */
         private $weight;
 
-        public function __construct($keyword, $weight)
+        public function __construct(string $keyword, int $weight)
         {
             $this->keyword = $keyword;
             $this->weight = $weight;
@@ -148,7 +148,7 @@ Now you can embed the ``Keyword`` document many times in the ``Product``:
     {
         // ...
 
-        /** @EmbedMany(targetDocument="Keyword") */
+        /** @EmbedMany(targetDocument=Keyword::class) */
         private $keywords;
 
         // ...

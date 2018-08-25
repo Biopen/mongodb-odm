@@ -1,15 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use function is_array;
 
-class MODM92Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class MODM92Test extends BaseTest
 {
     public function testDocumentWithEmbeddedDocuments()
     {
-        $embeddedDocuments = array(new MODM92TestEmbeddedDocument('foo'));
+        $embeddedDocuments = [new MODM92TestEmbeddedDocument('foo')];
 
         $testDoc = new MODM92TestDocument();
         $testDoc->setEmbeddedDocuments($embeddedDocuments);
@@ -17,17 +21,17 @@ class MODM92Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $testDoc = $this->dm->find(__NAMESPACE__.'\MODM92TestDocument', $testDoc->id);
+        $testDoc = $this->dm->find(MODM92TestDocument::class, $testDoc->id);
         $this->assertEquals($embeddedDocuments, $testDoc->embeddedDocuments->toArray());
 
-        $embeddedDocuments = array(new MODM92TestEmbeddedDocument('bar'));
+        $embeddedDocuments = [new MODM92TestEmbeddedDocument('bar')];
 
         $testDoc->setEmbeddedDocuments($embeddedDocuments);
         $this->assertEquals($embeddedDocuments, $testDoc->embeddedDocuments->toArray());
 
         $this->dm->flush();
         $this->dm->clear();
-        $testDoc = $this->dm->find(__NAMESPACE__.'\MODM92TestDocument', $testDoc->id);
+        $testDoc = $this->dm->find(MODM92TestDocument::class, $testDoc->id);
 
         $this->assertEquals($embeddedDocuments, $testDoc->embeddedDocuments->toArray());
     }
@@ -40,10 +44,11 @@ class MODM92TestDocument
     public $id;
 
     // Note: Test case fails with default "pushAll" strategy, but "set" works
-    /** @ODM\EmbedMany(targetDocument="MODM92TestEmbeddedDocument") */
+    /** @ODM\EmbedMany(targetDocument=MODM92TestEmbeddedDocument::class) */
     public $embeddedDocuments;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->embeddedDocuments = new ArrayCollection();
     }
 
@@ -58,7 +63,8 @@ class MODM92TestDocument
      *
      * @param array|Traversable $children
      */
-    public function setEmbeddedDocuments($embeddedDocuments) {
+    public function setEmbeddedDocuments($embeddedDocuments)
+    {
         $this->embeddedDocuments->clear();
 
         if (! (is_array($embeddedDocuments) || $embeddedDocuments instanceof \Traversable)) {
@@ -77,7 +83,8 @@ class MODM92TestEmbeddedDocument
     /** @ODM\Field(type="string") */
     public $name;
 
-    public function __construct($name) {
+    public function __construct($name)
+    {
         $this->name = $name;
     }
 }

@@ -1,190 +1,247 @@
-Storing Files with MongoGridFS
-==============================
+Storing Files with GridFS
+=========================
 
-The PHP Mongo extension provides a nice and convenient way to store
-files in chunks of data with the
-`MongoGridFS <http://us.php.net/manual/en/class.mongogridfs.php>`_.
+About GridFS
+------------
 
-It uses two database collections, one to store the metadata for the
-file, and another to store the contents of the file. The contents
-are stored in chunks to avoid going over the maximum allowed size
-of a MongoDB document.
+With GridFS, MongoDB provides a specification for storing and retrieving files
+that exceed the document size limit of 16 MB. GridFS uses two collections to
+store files. One collection stores the file chunks, and the other stores file
+metadata. More information on GridFS can be found in the
+`MongoDB GridFS documentation <https://docs.mongodb.com/manual/core/gridfs/>`_.
 
-You can easily setup a Document that is stored using the
-MongoGridFS:
+GridFS files provide the following properties
+-
+    ``_id`` stores the identifier of the file. By default, it uses a BSON
+    ObjectId, although you can override this in the mapping.
+-
+    ``chunkSize`` stores the size of a single chunk in bytes. By default, chunks
+    are 261120 bytes (i.e. 255 KiB) in size.
+-
+    ``filename`` is the name of the file as assigned. Note that filenames don't
+    need to be unique: instead, multiple files with the same name are treated
+    as revisions of that same file, with the last file uploaded being the latest
+    revision.
+-
+    ``length`` stores the size of the file in bytes.
+-
+    ``metadata`` is an optional embedded document that can be used to store
+    additional data along with the file.
+-
+    ``uploadDate`` stores the date when the file was originally persisted to the
+    GridFS bucket. It is also used to track revisions of multiple files with the
+    same filename.
+
+Mapping documents as GridFS files
+---------------------------------
 
 .. code-block:: php
 
     <?php
-    
+
     namespace Documents;
-    
-    /** @Document */
+
+    use Doctrine\ODM\MongoDB\Mapping\Annotations\File;
+    use Doctrine\ODM\MongoDB\Mapping\Annotations\Id;
+
+    /** @File(bucketName='image') */
     class Image
     {
         /** @Id */
         private $id;
-    
-        /** @Field */
+
+        /** @File\Filename */
         private $name;
-    
-        /** @File */
-        private $file;
-    
-        /** @Field */
+
+        /** @File\UploadDate */
         private $uploadDate;
-    
-        /** @Field */
+
+        /** @File\Length */
         private $length;
-    
-        /** @Field */
+
+        /** @File\ChunkSize */
         private $chunkSize;
-    
-        /** @Field */
-        private $md5;
-    
-        public function getId()
+
+        /** @File\Metadata(targetDocument=ImageMetadata::class) */
+        private $metadata;
+
+        public function getId(): ?string
         {
             return $this->id;
         }
-    
-        public function setName($name)
-        {
-            $this->name = $name;
-        }
-    
-        public function getName()
+
+        public function getName(): ?string
         {
             return $this->name;
         }
-    
-        public function getFile()
+
+        public function getChunkSize(): ?int
         {
-            return $this->file;
+            return $this->chunkSize;
         }
-    
-        public function setFile($file)
+
+        public function getLength(): ?int
         {
-            $this->file = $file;
+            return $this->length;
+        }
+
+        public function getUploadDate(): \DateTimeInterface
+        {
+            return $this->uploadDate;
+        }
+
+        public function getMetadata(): ?ImageMetadata
+        {
+            return $this->metadata;
         }
     }
 
-Notice how we annotated the $file property with @File. This is what
-tells the Document that it is to be stored using the MongoGridFS
-and the MongoGridFSFile instance is placed in the $file property
-for you to access the actual file itself.
+If you would rather use XML to map metadata, the corresponding mapping would
+look like this:
 
-The $uploadDate, $chunkSize and $md5 properties are automatically filled in
-for each file stored in GridFS (whether you like that or not).
-Feel free to create getters in your document to actually make use of them,
-but keep in mind that their values will be initially unset for new objects
-until the next time the document is hydrated (fetched from the database).
+.. code-block:: xml
 
-First you need to create a new Image:
+    <?xml version="1.0" encoding="UTF-8"?>
 
-.. code-block:: php
+    <doctrine-mongo-mapping xmlns="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
+        http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
 
-    <?php
+        <gridfs-file name="Documents\Image">
+            <id />
+            <length />
+            <chunk-size />
+            <upload-date />
+            <filename fieldName="name" />
 
-    $image = new Image();
-    $image->setName('Test image');
-    $image->setFile('/path/to/image.png');
-    
-    $dm->persist($image);
-    $dm->flush();
+            <metadata target-document="Documents\ImageMetadata" />
+        </gridfs-file>
+    </doctrine-mongo-mapping>
 
-Now you can later query for the Image and render it:
+With XML mappings, the fields are automatically mapped to camel-cased properties.
+To change property names, simply override the ``fieldName`` attribute for each
+field. You cannot override any other options for GridFS fields.
 
-.. code-block:: php
-
-    <?php
-
-    $image = $dm->createQueryBuilder('Documents\Image')
-        ->field('name')->equals('Test image')
-        ->getQuery()
-        ->getSingleResult();
-    
-    header('Content-type: image/png;');
-    echo $image->getFile()->getBytes();
-
-You can of course make references to this Image document from
-another document. Imagine you had a Profile document and you wanted
-every Profile to have a profile image:
+The ``ImageMetadata`` class must be an embedded document:
 
 .. code-block:: php
 
     <?php
-    
+
     namespace Documents;
-    
-    /** @Document */
-    class Profile
+
+    use Doctrine\ODM\MongoDB\Mapping\Annotations\EmbeddedDocument;
+    use Doctrine\ODM\MongoDB\Mapping\Annotations\Field;
+
+    /** @EmbeddedDocument */
+    class ImageMetadata
     {
-        /** @Id */
-        private $id;
-    
-        /** @Field */
-        private $name;
-    
-        /** @ReferenceOne(targetDocument="Documents\Image") */
-        private $image;
-    
-        public function getId()
+        /** @Field(type="string") */
+        private $contentType;
+
+        public function __construct(string $contentType)
         {
-          return $this->id;
+            $this->contentType = $contentType;
         }
-    
-        public function getName()
+
+        public function getContentType(): ?string
         {
-            return $this->name;
-        }
-    
-        public function setName($name)
-        {
-            $this->name = $name;
-        }
-    
-        public function getImage()
-        {
-            return $this->image;
-        }
-    
-        public function setImage(Image $image)
-        {
-            $this->image = $image;
+            return $this->contentType;
         }
     }
 
-Now you can create a new Profile and give it an Image:
+Inserting files into GridFS buckets
+-----------------------------------
+
+To insert a new file, you have to upload its contents using the repository. You
+have the option to upload contents from a file or a stream. Alternatively, you
+can also open an upload stream and write contents yourself.
 
 .. code-block:: php
 
     <?php
 
-    $image = new Image();
-    $image->setName('Test image');
-    $image->setFile('/path/to/image.png');
-    
-    $profile = new Profile();
-    $profile->setName('Jonathan H. Wage');
-    $profile->setImage($image);
-    
-    $dm->persist($profile);
-    $dm->flush();
+    $repository = $documentManager->getRepository(Documents\Image::class);
+    $file = $repository->uploadFromFile('image.jpg', '/tmp/path/to/image');
 
-If you want to query for the Profile and load the Image reference
-in a query you can use:
+When using the default GridFS repository implementation, the ``uploadFromFile``
+and ``uploadFromStream`` methods return a proxy object of the file you just
+uploaded.
+
+If you want to pass options, such as a metadata object to the uploaded file, you
+can pass an ``UploadOptions`` object as the last argument to the
+``uploadFromFile``, ``uploadFromStream``, or ``openUploadStream`` method call:
 
 .. code-block:: php
 
     <?php
 
-    $profile = $dm->createQueryBuilder('Profile')
-        ->field('name')->equals('Jonathan H. Wage')
-        ->getQuery()
-        ->getSingleResult();
-    
-    $image = $profile->getImage();
-    
-    header('Content-type: image/png;');
-    echo $image->getFile()->getBytes();
+    use Doctrine\ODM\MongoDB\Repository\UploadOptions;
+
+    $uploadOptions = new UploadOptions();
+    $uploadOptions->metadata = new Documents\ImageMetadata('image/jpeg');
+    $uploadOptions->chunkSizeBytes = 1024 * 1024;
+
+    $repository = $documentManager->getRepository(Documents\Image::class);
+    $file = $repository->uploadFromFile('image.jpg', '/tmp/path/to/image', $uploadOptions);
+
+Reading files from GridFS buckets
+---------------------------------
+
+When reading GridFS files, they behave like all other documents. You can query
+for them using the ``find*`` methods in the repository, create query or
+aggregation pipeline builders, and also use them as ``targetDocument`` in
+references. You can access all properties of the file including metadata, but
+not file content.
+
+The GridFS specification uses streams to deal with file contents. To avoid
+having this resource overhead every time you fetch a file from the database,
+file contents are only provided through the ``downloadToStream`` repository
+method. Accessors to provide a stream in the document may be implemented in
+future versions.
+
+The following code sample puts the file contents into a different file after
+uploading:
+
+.. code-block:: php
+
+    <?php
+
+    $repository = $documentManager->getRepository(Documents\Image::class);
+    $file = $repository->uploadFromFile('image.jpg', '/tmp/path/to/image', new Documents\ImageMetadata('image/jpeg'));
+
+    $stream = fopen('tmp/path/to/copy', 'w+');
+    try {
+        $repository->downloadToStream($file->getId(), $stream);
+    finally {
+        fclose($stream);
+    }
+
+The ``downloadToStream`` method takes the identifier of a file as first argument
+and a writable stream as the second arguments. If you need to manipulate the
+file contents before writing it to disk or sending it to the client, consider
+using a memory stream using the ``php://memory`` stream wrapper.
+
+Alternatively, you can also use the ``openDownloadStream`` method which returns
+a stream from where you can read file contents:
+
+.. code-block:: php
+
+    <?php
+
+    use Doctrine\ODM\MongoDB\Repository\UploadOptions;
+
+    $uploadOptions = new UploadOptions();
+    $uploadOptions->metadata = new Documents\ImageMetadata('image/jpeg');
+
+    $repository = $documentManager->getRepository(Documents\Image::class);
+    $file = $repository->uploadFromFile('image.jpg', '/tmp/path/to/image', $uploadOptions);
+
+    $stream = $repository->openDownloadStream($file->getId());
+    try {
+        $contents = stream_get_contents($stream);
+    finally {
+        fclose($stream);
+    }
+

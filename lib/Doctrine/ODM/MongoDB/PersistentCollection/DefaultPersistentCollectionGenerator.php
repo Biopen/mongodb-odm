@@ -1,30 +1,34 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\PersistentCollection;
 
 use Doctrine\ODM\MongoDB\Configuration;
+use const DIRECTORY_SEPARATOR;
+use function array_map;
+use function array_pop;
+use function class_exists;
+use function dirname;
+use function explode;
+use function file_exists;
+use function file_put_contents;
+use function implode;
+use function interface_exists;
+use function is_dir;
+use function is_writable;
+use function method_exists;
+use function mkdir;
+use function rename;
+use function str_replace;
+use function strtolower;
+use function substr;
+use function uniqid;
+use function var_export;
 
 /**
  * Default generator for custom PersistentCollection classes.
  *
- * @since 1.1
  */
 final class DefaultPersistentCollectionGenerator implements PersistentCollectionGenerator
 {
@@ -42,11 +46,7 @@ final class DefaultPersistentCollectionGenerator implements PersistentCollection
      */
     private $collectionDir;
 
-    /**
-     * @param string $collectionDir
-     * @param string $collectionNs
-     */
-    public function __construct($collectionDir, $collectionNs)
+    public function __construct(string $collectionDir, string $collectionNs)
     {
         $this->collectionDir = $collectionDir;
         $this->collectionNamespace = $collectionNs;
@@ -55,7 +55,7 @@ final class DefaultPersistentCollectionGenerator implements PersistentCollection
     /**
      * {@inheritdoc}
      */
-    public function generateClass($class, $dir)
+    public function generateClass(string $class, string $dir): void
     {
         $collClassName = str_replace('\\', '', $class) . 'Persistent';
         $className = $this->collectionNamespace . '\\' . $collClassName;
@@ -66,19 +66,19 @@ final class DefaultPersistentCollectionGenerator implements PersistentCollection
     /**
      * {@inheritdoc}
      */
-    public function loadClass($collectionClass, $autoGenerate)
+    public function loadClass(string $collectionClass, int $autoGenerate): string
     {
         // These checks are not in __construct() because of BC and should be moved for 2.0
-        if ( ! $this->collectionDir) {
+        if (! $this->collectionDir) {
             throw PersistentCollectionException::directoryRequired();
         }
-        if ( ! $this->collectionNamespace) {
+        if (! $this->collectionNamespace) {
             throw PersistentCollectionException::namespaceRequired();
         }
 
         $collClassName = str_replace('\\', '', $collectionClass) . 'Persistent';
         $className = $this->collectionNamespace . '\\' . $collClassName;
-        if ( ! class_exists($className, false)) {
+        if (! class_exists($className, false)) {
             $fileName = $this->collectionDir . DIRECTORY_SEPARATOR . $collClassName . '.php';
             switch ($autoGenerate) {
                 case Configuration::AUTOGENERATE_NEVER:
@@ -91,7 +91,7 @@ final class DefaultPersistentCollectionGenerator implements PersistentCollection
                     break;
 
                 case Configuration::AUTOGENERATE_FILE_NOT_EXISTS:
-                    if ( ! file_exists($fileName)) {
+                    if (! file_exists($fileName)) {
                         $this->generateCollectionClass($collectionClass, $className, $fileName);
                     }
                     require $fileName;
@@ -106,11 +106,14 @@ final class DefaultPersistentCollectionGenerator implements PersistentCollection
         return $className;
     }
 
-    private function generateCollectionClass($for, $targetFqcn, $fileName)
+    /**
+     * @param string|false $fileName Filename to write collection class code or false to eval it.
+     */
+    private function generateCollectionClass(string $for, string $targetFqcn, $fileName)
     {
         $exploded = explode('\\', $targetFqcn);
         $class = array_pop($exploded);
-        $namespace = join('\\', $exploded);
+        $namespace = implode('\\', $exploded);
         $code = <<<CODE
 <?php
 
@@ -146,8 +149,7 @@ CODE;
         $rc = new \ReflectionClass($for);
         $rt = new \ReflectionClass('Doctrine\\ODM\\MongoDB\\PersistentCollection\\PersistentCollectionTrait');
         foreach ($rc->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if (
-                $rt->hasMethod($method->name) ||
+            if ($rt->hasMethod($method->name) ||
                 $method->isConstructor() ||
                 $method->isFinal() ||
                 $method->isStatic()
@@ -159,17 +161,17 @@ CODE;
         $code .= "}\n";
 
         if ($fileName === false) {
-            if ( ! class_exists($targetFqcn)) {
+            if (! class_exists($targetFqcn)) {
                 eval(substr($code, 5));
             }
         } else {
             $parentDirectory = dirname($fileName);
 
-            if ( ! is_dir($parentDirectory) && (false === @mkdir($parentDirectory, 0775, true))) {
+            if (! is_dir($parentDirectory) && (@mkdir($parentDirectory, 0775, true) === false)) {
                 throw PersistentCollectionException::directoryNotWritable();
             }
 
-            if ( ! is_writable($parentDirectory)) {
+            if (! is_writable($parentDirectory)) {
                 throw PersistentCollectionException::directoryNotWritable();
             }
 
@@ -179,7 +181,7 @@ CODE;
         }
     }
 
-    private function generateMethod(\ReflectionMethod $method)
+    private function generateMethod(\ReflectionMethod $method): string
     {
         $parametersString = $this->buildParametersString($method);
         $callParamsString = implode(', ', $this->getParameterNamesForDecoratedCall($method->getParameters()));
@@ -202,21 +204,17 @@ CODE;
         return $method;
     }
 
-    /**
-     * @param \ReflectionMethod $method
-     *
-     * @return string
-     */
-    private function buildParametersString(\ReflectionMethod $method)
+    private function buildParametersString(\ReflectionMethod $method): string
     {
         $parameters = $method->getParameters();
-        $parameterDefinitions = array();
+        $parameterDefinitions = [];
 
-        /* @var $param \ReflectionParameter */
+        /** @var \ReflectionParameter $param */
         foreach ($parameters as $param) {
             $parameterDefinition = '';
+            $parameterType = $this->getParameterType($param);
 
-            if ($parameterType = $this->getParameterType($param)) {
+            if ($parameterType) {
                 $parameterDefinition .= $parameterType . ' ';
             }
 
@@ -243,12 +241,7 @@ CODE;
         return implode(', ', $parameterDefinitions);
     }
 
-    /**
-     * @param \ReflectionParameter $parameter
-     *
-     * @return string|null
-     */
-    private function getParameterType(\ReflectionParameter $parameter)
+    private function getParameterType(\ReflectionParameter $parameter): ?string
     {
         // We need to pick the type hint class too
         if ($parameter->isArray()) {
@@ -278,7 +271,7 @@ CODE;
      *
      * @return string[]
      */
-    private function getParameterNamesForDecoratedCall(array $parameters)
+    private function getParameterNamesForDecoratedCall(array $parameters): array
     {
         return array_map(
             function (\ReflectionParameter $parameter) {
@@ -299,44 +292,34 @@ CODE;
     }
 
     /**
-     * @param \ReflectionMethod $method
-     *
-     * @return string
-     *
      * @see \Doctrine\Common\Proxy\ProxyGenerator::getMethodReturnType()
      */
-    private function getMethodReturnType(\ReflectionMethod $method)
+    private function getMethodReturnType(\ReflectionMethod $method): string
     {
-        if ( ! method_exists($method, 'hasReturnType') || ! $method->hasReturnType()) {
+        if (! method_exists($method, 'hasReturnType') || ! $method->hasReturnType()) {
             return '';
         }
         return ': ' . $this->formatType($method->getReturnType(), $method);
     }
 
     /**
-     * @param \ReflectionType $type
-     * @param \ReflectionMethod $method
-     * @param \ReflectionParameter|null $parameter
-     *
-     * @return string
-     *
      * @see \Doctrine\Common\Proxy\ProxyGenerator::formatType()
      */
     private function formatType(
         \ReflectionType $type,
         \ReflectionMethod $method,
-        \ReflectionParameter $parameter = null
-    ) {
+        ?\ReflectionParameter $parameter = null
+    ): string {
         $name = method_exists($type, 'getName') ? $type->getName() : (string) $type;
         $nameLower = strtolower($name);
-        if ('self' === $nameLower) {
+        if ($nameLower === 'self') {
             $name = $method->getDeclaringClass()->getName();
         }
-        if ('parent' === $nameLower) {
+        if ($nameLower === 'parent') {
             $name = $method->getDeclaringClass()->getParentClass()->getName();
         }
-        if ( ! $type->isBuiltin() && ! class_exists($name) && ! interface_exists($name)) {
-            if (null !== $parameter) {
+        if (! $type->isBuiltin() && ! class_exists($name) && ! interface_exists($name)) {
+            if ($parameter !== null) {
                 throw PersistentCollectionException::invalidParameterTypeHint(
                     $method->getDeclaringClass()->getName(),
                     $method->getName(),
@@ -348,11 +331,11 @@ CODE;
                 $method->getName()
             );
         }
-        if ( ! $type->isBuiltin()) {
+        if (! $type->isBuiltin()) {
             $name = '\\' . $name;
         }
         if ($type->allowsNull()
-            && (null === $parameter || ! $parameter->isDefaultValueAvailable() || null !== $parameter->getDefaultValue())
+            && ($parameter === null || ! $parameter->isDefaultValueAvailable() || $parameter->getDefaultValue() !== null)
         ) {
             $name = '?' . $name;
         }

@@ -25,32 +25,34 @@ Now we can add some event listeners to the ``$evm``. Let's create a
 
     <?php
 
+    use Doctrine\Common\EventManager;
+
     class EventTest
     {
         const preFoo = 'preFoo';
         const postFoo = 'postFoo';
-    
+
         private $_evm;
-    
+
         public $preFooInvoked = false;
         public $postFooInvoked = false;
-    
-        public function __construct($evm)
+
+        public function __construct(EventManager $evm)
         {
             $evm->addEventListener(array(self::preFoo, self::postFoo), $this);
         }
-    
-        public function preFoo(EventArgs $e)
+
+        public function preFoo(EventArgs $e): void 
         {
             $this->preFooInvoked = true;
         }
-    
-        public function postFoo(EventArgs $e)
+
+        public function postFoo(EventArgs $e): void
         {
             $this->postFooInvoked = true;
         }
     }
-    
+
     // Create a new instance
     $test = new EventTest($evm);
 
@@ -85,20 +87,20 @@ array of events it should be subscribed to.
     class TestEventSubscriber implements \Doctrine\Common\EventSubscriber
     {
         const preFoo = 'preFoo';
-    
+
         public $preFooInvoked = false;
-    
-        public function preFoo()
+
+        public function preFoo(): void
         {
             $this->preFooInvoked = true;
         }
-    
-        public function getSubscribedEvents()
+
+        public function getSubscribedEvents(): array
         {
             return array(self::preFoo);
         }
     }
-    
+
     $eventSubscriber = new TestEventSubscriber();
     $evm->addEventSubscriber($eventSubscriber);
 
@@ -130,27 +132,27 @@ Lifecycle Events
 The DocumentManager and UnitOfWork trigger several events during
 the life-time of their registered documents.
 
-- 
+-
    preRemove - The preRemove event occurs for a given document before
    the respective DocumentManager remove operation for that document
    is executed.
-- 
+-
    postRemove - The postRemove event occurs for a document after the
    document has been removed. It will be invoked after the database
    delete operations.
-- 
+-
    prePersist - The prePersist event occurs for a given document
    before the respective DocumentManager persist operation for that
    document is executed.
-- 
+-
    postPersist - The postPersist event occurs for a document after
    the document has been made persistent. It will be invoked after the
    database insert operations. Generated primary key values are
    available in the postPersist event.
-- 
+-
    preUpdate - The preUpdate event occurs before the database update
    operations to document data.
-- 
+-
    postUpdate - The postUpdate event occurs after the database update
    operations to document data.
 -
@@ -161,10 +163,10 @@ the life-time of their registered documents.
    postLoad - The postLoad event occurs for a document after the
    document has been loaded into the current DocumentManager from the
    database or after the refresh operation has been applied to it.
-- 
+-
    loadClassMetadata - The loadClassMetadata event occurs after the
    mapping metadata for a class has been loaded from a mapping source
-   (annotations/xml/yaml).
+   (annotations/xml).
 -
    preFlush - The preFlush event occurs before the change-sets of all
    managed documents are computed. This both a lifecycle call back and
@@ -172,7 +174,7 @@ the life-time of their registered documents.
 -
    postFlush - The postFlush event occurs after the change-sets of all
    managed documents are computed.
-- 
+-
    onFlush - The onFlush event occurs after the change-sets of all
    managed documents are computed. This event is not a lifecycle
    callback.
@@ -201,13 +203,13 @@ ODM package.
 These can be hooked into by two different types of event
 listeners:
 
-- 
+-
    Lifecycle Callbacks are methods on the document classes that are
    called when the event is triggered. They receive instances
-   of ``Doctrine\ODM\MongoDB\Event\LifecycleEventArgs`` (see relevant 
-   examples below) as arguments and are specifically designed to allow 
+   of ``Doctrine\ODM\MongoDB\Event\LifecycleEventArgs`` (see relevant
+   examples below) as arguments and are specifically designed to allow
    changes inside the document classes state.
-- 
+-
    Lifecycle Event Listeners are classes with specific callback
    methods that receives some kind of ``EventArgs`` instance which
    give access to the document, DocumentManager or other relevant
@@ -237,54 +239,54 @@ event occurs.
     class User
     {
         // ...
-    
+
         /**
          * @Field
          */
         public $value;
-    
+
         /** @Field */
         private $createdAt;
-    
+
         /** @PrePersist */
-        public function doStuffOnPrePersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function doStuffOnPrePersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $this->createdAt = date('Y-m-d H:i:s');
         }
-    
+
         /** @PrePersist */
-        public function doOtherStuffOnPrePersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function doOtherStuffOnPrePersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $this->value = 'changed from prePersist callback!';
         }
-    
+
         /** @PostPersist */
-        public function doStuffOnPostPersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function doStuffOnPostPersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $this->value = 'changed from postPersist callback!';
         }
 
         /** @PreLoad */
-        public function doStuffOnPreLoad(\Doctrine\ODM\MongoDB\Event\PreLoadEventArgs $eventArgs)
+        public function doStuffOnPreLoad(\Doctrine\ODM\MongoDB\Event\PreLoadEventArgs $eventArgs): void
         {
             $data =& $eventArgs->getData();
             $data['value'] = 'changed from preLoad callback';
         }
-    
+
         /** @PostLoad */
-        public function doStuffOnPostLoad(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function doStuffOnPostLoad(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $this->value = 'changed from postLoad callback!';
         }
-    
+
         /** @PreUpdate */
-        public function doStuffOnPreUpdate(\Doctrine\ODM\MongoDB\Event\PreUpdateEventArgs $eventArgs)
+        public function doStuffOnPreUpdate(\Doctrine\ODM\MongoDB\Event\PreUpdateEventArgs $eventArgs): void
         {
             $this->value = 'changed from preUpdate callback!';
         }
 
         /** @PreFlush */
-        public function preFlush(\Doctrine\ODM\MongoDB\Event\PreFlushEventArgs $eventArgs)
+        public function preFlush(\Doctrine\ODM\MongoDB\Event\PreFlushEventArgs $eventArgs): void
         {
             $this->value = 'changed from preFlush callback!';
         }
@@ -314,7 +316,7 @@ EventManager that is passed to the DocumentManager factory:
     $eventManager = new EventManager();
     $eventManager->addEventListener(array(Events::preUpdate), new MyEventListener());
     $eventManager->addEventSubscriber(new MyEventSubscriber());
-    
+
     $documentManager = DocumentManager::create($mongo, $config, $eventManager);
 
 You can also retrieve the event manager instance after the
@@ -358,7 +360,7 @@ Define the ``EventTest`` class:
 
     class EventTest
     {
-        public function prePersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function prePersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $document = $eventArgs->getDocument();
             $document->setSomething();
@@ -384,7 +386,7 @@ Define the ``EventTest`` class with a ``preLoad()`` method:
 
     class EventTest
     {
-        public function preLoad(\Doctrine\ODM\MongoDB\Event\PreLoadEventArgs $eventArgs)
+        public function preLoad(\Doctrine\ODM\MongoDB\Event\PreLoadEventArgs $eventArgs): void
         {
             $data =& $eventArgs->getData();
             // do something
@@ -410,7 +412,7 @@ Define the ``EventTest`` class with a ``postLoad()`` method:
 
     class EventTest
     {
-        public function postLoad(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function postLoad(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $document = $eventArgs->getDocument();
             // do something
@@ -436,7 +438,7 @@ Define the ``EventTest`` class with a ``preRemove()`` method:
 
     class EventTest
     {
-        public function preRemove(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function preRemove(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $document = $eventArgs->getDocument();
             // do something
@@ -462,7 +464,7 @@ Define the ``EventTest`` class with a ``preFlush()`` method:
 
     class EventTest
     {
-        public function preFlush(\Doctrine\ODM\MongoDB\Event\PreFlushEventArgs $eventArgs)
+        public function preFlush(\Doctrine\ODM\MongoDB\Event\PreFlushEventArgs $eventArgs): void
         {
             $dm = $eventArgs->getDocumentManager();
             $uow = $dm->getUnitOfWork();
@@ -489,7 +491,7 @@ Define the ``EventTest`` class with a ``onFlush()`` method:
 
     class EventTest
     {
-        public function onFlush(\Doctrine\ODM\MongoDB\Event\OnFlushEventArgs $eventArgs)
+        public function onFlush(\Doctrine\ODM\MongoDB\Event\OnFlushEventArgs $eventArgs): void
         {
             $dm = $eventArgs->getDocumentManager();
             $uow = $dm->getUnitOfWork();
@@ -516,7 +518,7 @@ Define the ``EventTest`` class with a ``postFlush()`` method:
 
     class EventTest
     {
-        public function postFlush(\Doctrine\ODM\MongoDB\Event\PostFlushEventArgs $eventArgs)
+        public function postFlush(\Doctrine\ODM\MongoDB\Event\PostFlushEventArgs $eventArgs): void
         {
             $dm = $eventArgs->getDocumentManager();
             $uow = $dm->getUnitOfWork();
@@ -543,7 +545,7 @@ Define the ``EventTest`` class with a ``preUpdate()`` method:
 
     class EventTest
     {
-        public function preUpdate(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function preUpdate(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
             $document = $eventArgs->getDocument();
             $document->setSomething();
@@ -577,12 +579,12 @@ Define the ``EventTest`` class with a ``onClear()`` method:
 
     class EventTest
     {
-        public function onClear(\Doctrine\ODM\MongoDB\Event\OnClearEventArgs $eventArgs)
+        public function onClear(\Doctrine\ODM\MongoDB\Event\OnClearEventArgs $eventArgs): void
         {
             $class = $eventArgs->getDocumentClass();
             $dm = $eventArgs->getDocumentManager();
             $uow = $dm->getUnitOfWork();
-            
+
             // Check if event clears all documents.
             if ($eventArgs->clearsAllDocuments()) {
                 // do something
@@ -610,7 +612,7 @@ Define the ``EventTest`` class with a ``documentNotFound()`` method:
 
     class EventTest
     {
-        public function documentNotFound(\Doctrine\ODM\MongoDB\Event\DocumentNotFoundEventArgs $eventArgs)
+        public function documentNotFound(\Doctrine\ODM\MongoDB\Event\DocumentNotFoundEventArgs $eventArgs): void
         {
             $proxy = $eventArgs->getObject();
             $identifier = $eventArgs->getIdentifier();
@@ -619,7 +621,6 @@ Define the ``EventTest`` class with a ``documentNotFound()`` method:
             $eventArgs->disableException();
         }
     }
-
 
 postUpdate, postRemove, postPersist
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -642,15 +643,15 @@ Define the ``EventTest`` class with a ``postUpdate()``, ``postRemove()`` and ``p
 
     class EventTest
     {
-        public function postUpdate(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function postUpdate(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
         }
 
-        public function postRemove(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function postRemove(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
         }
 
-        public function postPersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs)
+        public function postPersist(\Doctrine\ODM\MongoDB\Event\LifecycleEventArgs $eventArgs): void
         {
         }
     }
@@ -677,7 +678,7 @@ Define the ``EventTest`` class with a ``postCollectionLoad()`` method:
 
     class EventTest
     {
-        public function postCollectionLoad(\Doctrine\ODM\MongoDB\Event\PostCollectionLoadEventArgs $eventArgs)
+        public function postCollectionLoad(\Doctrine\ODM\MongoDB\Event\PostCollectionLoadEventArgs $eventArgs): void
         {
             $collection = $eventArgs->getCollection();
             if ($collection instanceof \Malarzm\Collections\DiffableCollection) {
@@ -685,7 +686,6 @@ Define the ``EventTest`` class with a ``postCollectionLoad()`` method:
             }
         }
     }
-
 
 Load ClassMetadata Event
 ------------------------
@@ -702,10 +702,10 @@ this process and manipulate the instance with the ``loadClassMetadata`` event:
     $metadataFactory = $dm->getMetadataFactory();
     $evm = $dm->getEventManager();
     $evm->addEventListener(Events::loadClassMetadata, $test);
-    
+
     class EventTest
     {
-        public function loadClassMetadata(\Doctrine\ODM\MongoDB\Event\LoadClassMetadataEventArgs $eventArgs)
+        public function loadClassMetadata(\Doctrine\ODM\MongoDB\Event\LoadClassMetadataEventArgs $eventArgs): void
         {
             $classMetadata = $eventArgs->getClassMetadata();
             $fieldMapping = array(

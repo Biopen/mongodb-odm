@@ -1,13 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\Bars\Bar;
 use Documents\Bars\Location;
-use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 
-class CollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class CollectionsTest extends BaseTest
 {
     public function testCollections()
     {
@@ -19,7 +22,7 @@ class CollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $bar = $this->dm->find('Documents\Bars\Bar', $bar->getId());
+        $bar = $this->dm->find(Bar::class, $bar->getId());
 
         $this->assertNotNull($bar);
         $locations = $bar->getLocations();
@@ -28,23 +31,23 @@ class CollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $test = $this->dm->getDocumentCollection('Documents\Bars\Bar')->findOne();
-        $this->assertEquals(2, count($test['locations']));
+        $test = $this->dm->getDocumentCollection(Bar::class)->findOne();
+        $this->assertCount(2, $test['locations']);
 
-        $bar = $this->dm->find('Documents\Bars\Bar', $bar->getId());
+        $bar = $this->dm->find(Bar::class, $bar->getId());
         $this->assertNotNull($bar);
         $locations = $bar->getLocations();
-        $this->assertEquals(2, count($locations));
+        $this->assertCount(2, $locations);
         $this->assertEquals('changed', $locations[0]->getName());
 
         unset($locations[0], $locations[1]);
         $this->dm->flush();
         $this->dm->clear();
 
-        $bar = $this->dm->find('Documents\Bars\Bar', $bar->getId());
+        $bar = $this->dm->find(Bar::class, $bar->getId());
         $this->assertNotNull($bar);
         $locations = $bar->getLocations();
-        $this->assertEquals(0, count($locations));
+        $this->assertCount(0, $locations);
 
         $bar->addLocation(new Location('West Nashville'));
         $bar->addLocation(new Location('East Nashville'));
@@ -52,22 +55,22 @@ class CollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $bar = $this->dm->find('Documents\Bars\Bar', $bar->getId());
+        $bar = $this->dm->find(Bar::class, $bar->getId());
         $this->assertEquals($bar->getId(), $this->dm->getUnitOfWork()->getDocumentIdentifier($bar));
 
         $this->assertNotNull($bar);
         $locations = $bar->getLocations();
-        $this->assertEquals(3, count($locations));
+        $this->assertCount(3, $locations);
         $locations = $bar->getLocations();
         $locations->clear();
-        $this->assertEquals(0, count($locations));
+        $this->assertCount(0, $locations);
         $this->dm->flush();
         $this->dm->clear();
-        $bar = $this->dm->find('Documents\Bars\Bar', $bar->getId());
+        $bar = $this->dm->find(Bar::class, $bar->getId());
         $locations = $bar->getLocations();
-        $this->assertEquals(0, count($locations));
+        $this->assertCount(0, $locations);
         $this->dm->flush();
-        
+
         $bar->setLocations(new ArrayCollection([ new Location('Cracow') ]));
         $this->uow->computeChangeSets();
         $changeSet = $this->uow->getDocumentChangeSet($bar);
@@ -76,30 +79,52 @@ class CollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertSame($bar->getLocations(), $changeSet['locations'][1]);
     }
 
-    public function testCreateCollections()
+    public function testCreateCollectionsBasic()
     {
         $sm = $this->dm->getSchemaManager();
-        $sm->dropDocumentCollection(__NAMESPACE__.'\CreateCollectionTest');
-        $sm->createDocumentCollection(__NAMESPACE__.'\CreateCollectionTest');
+        $sm->dropDocumentCollection(CollectionTestBasic::class);
+        $sm->createDocumentCollection(CollectionTestBasic::class);
 
-        $coll = $this->dm->getDocumentCollection(__NAMESPACE__.'\CreateCollectionTest');
-        $insert = array(array(1), array(2), array(3));
-        $coll->batchInsert($insert);
+        $coll = $this->dm->getDocumentCollection(CollectionTestBasic::class);
+        $insert = [
+            ['username' => 'bob'],
+            ['username' => 'alice'],
+            ['username' => 'jim'],
+        ];
+        $coll->insertMany($insert);
 
-        $data = iterator_to_array($coll->find());
-        $this->assertEquals(3, count($data));
+        $data = $coll->find()->toArray();
+        $this->assertCount(3, $data);
+    }
+
+    public function testCreateCollectionsCapped()
+    {
+        $sm = $this->dm->getSchemaManager();
+        $sm->dropDocumentCollection(CollectionTestCapped::class);
+        $sm->createDocumentCollection(CollectionTestCapped::class);
+
+        $coll = $this->dm->getDocumentCollection(CollectionTestCapped::class);
+        $insert = [
+            ['username' => 'bob'],
+            ['username' => 'alice'],
+            ['username' => 'jim'],
+        ];
+        $coll->insertMany($insert);
+
+        $data = $coll->find()->toArray();
+        $this->assertCount(1, $data);
     }
 }
 
 /**
  * @ODM\Document(collection={
- *   "name"="testing",
- *   "capped"="true",
- *   "size"="1000",
- *   "max"="1"
+ *   "name"="CollectionTestCapped",
+ *   "capped"=true,
+ *   "size"=1000,
+ *   "max"=1
  * })
  */
-class CollectionTest
+class CollectionTestCapped
 {
     /** @ODM\Id */
     public $id;
@@ -111,9 +136,11 @@ class CollectionTest
 /**
  * @ODM\Document
  */
-class CreateCollectionTest
+class CollectionTestBasic
 {
     /** @ODM\Id */
     public $id;
 
+    /** @ODM\Field(type="string") */
+    public $username;
 }

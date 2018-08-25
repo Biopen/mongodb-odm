@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -10,7 +12,7 @@ class Event
     /** @ODM\Id */
     private $id;
 
-    /** @ODM\ReferenceOne(targetDocument="Documents\User") */
+    /** @ODM\ReferenceOne(targetDocument=User::class) */
     private $user;
 
     /** @ODM\Field(type="string") */

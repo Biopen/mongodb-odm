@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH1011Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH1011Test extends BaseTest
 {
     public function testClearCollection()
     {
@@ -41,7 +44,7 @@ class GH1011Document
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedMany(targetDocument="GH1011Embedded", strategy="set") */
+    /** @ODM\EmbedMany(targetDocument=GH1011Embedded::class, strategy="set") */
     public $embeds;
 
     public function __construct()

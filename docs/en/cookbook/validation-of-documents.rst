@@ -33,15 +33,15 @@ is allowed to:
 
     class Order
     {
-        public function assertCustomerAllowedBuying()
+        public function assertCustomerAllowedBuying(): void
         {
             $orderLimit = $this->customer->getOrderLimit();
-    
+
             $amount = 0;
             foreach ($this->orderLines AS $line) {
                 $amount += $line->getAmount();
             }
-    
+
             if ($amount > $orderLimit) {
                 throw new CustomerOrderLimitExceededException();
             }
@@ -65,7 +65,7 @@ First Annotations:
         class Order
         {
             /** @PrePersist @PreUpdate */
-            public function assertCustomerAllowedBuying() {}
+            public function assertCustomerAllowedBuying(): void {}
         }
 
     .. code-block:: xml
@@ -97,16 +97,16 @@ validation callbacks.
     class Order
     {
         /** @PrePersist @PreUpdate */
-        public function validate()
+        public function validate(): void
         {
             if (!($this->plannedShipDate instanceof DateTime)) {
                 throw new ValidateException();
             }
-    
+
             if ($this->plannedShipDate->format('U') < time()) {
                 throw new ValidateException();
             }
-    
+
             if ($this->customer == null) {
                 throw new OrderRequiresCustomerException();
             }

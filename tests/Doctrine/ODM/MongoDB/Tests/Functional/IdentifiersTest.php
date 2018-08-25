@@ -1,14 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
-class IdentifiersTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Documents\Event;
+use Documents\User;
+use function get_class;
+
+class IdentifiersTest extends BaseTest
 {
     public function testGetIdentifierValue()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->setUsername('jwage');
-        $event = new \Documents\Event();
+        $event = new Event();
         $event->setTitle('test event title');
         $event->setUser($user);
         $this->dm->persist($user);
@@ -36,25 +43,25 @@ class IdentifiersTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testIdentifiersAreSet()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->setUsername('jwage');
         $user->setPassword('test');
 
         $this->dm->persist($user);
         $this->dm->flush();
 
-        $this->assertTrue($user->getId() !== '');
+        $this->assertNotSame('', $user->getId());
     }
 
     public function testIdentityMap()
     {
-        $user = new \Documents\User();
+        $user = new User();
         $user->setUsername('jwage');
 
         $this->dm->persist($user);
         $this->dm->flush();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->field('id')->equals($user->getId());
 
         $user = $qb->getQuery()->getSingleResult();
@@ -80,7 +87,7 @@ class IdentifiersTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $user4 = $qb->getQuery()->getSingleResult();
         $this->assertEquals('changed', $user4->getUsername());
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->findAndUpdate()
             ->returnNew(true)
             ->hydrate(true)

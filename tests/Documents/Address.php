@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -22,7 +24,7 @@ class Address
     /** @ODM\Field(type="int", strategy="increment") */
     public $count = 0;
 
-    /** @ODM\EmbedOne(targetDocument="Address") */
+    /** @ODM\EmbedOne(targetDocument=Address::class) */
     private $subAddress;
 
     /** @ODM\Field(name="testFieldName", type="string") */

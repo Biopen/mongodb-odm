@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH665Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH665Test extends BaseTest
 {
     public function testUseAddToSetStrategyOnEmbeddedDocument()
     {
@@ -17,27 +20,27 @@ class GH665Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $check = $this->dm->getDocumentCollection(__NAMESPACE__ . '\GH665Document')
-            ->findOne(array('embeddedPushAll.name' => 'foo'));
+        $check = $this->dm->getDocumentCollection(GH665Document::class)
+            ->findOne(['embeddedPushAll.name' => 'foo']);
         $this->assertNotNull($check);
         $this->assertSame($document->id, (string) $check['_id']);
 
-        $check = $this->dm->getDocumentCollection(__NAMESPACE__ . '\GH665Document')
-            ->findOne(array('embeddedAddToSet.name' => 'bar'));
+        $check = $this->dm->getDocumentCollection(GH665Document::class)
+            ->findOne(['embeddedAddToSet.name' => 'bar']);
         $this->assertNotNull($check);
         $this->assertSame($document->id, (string) $check['_id']);
 
-        $persisted = $this->dm->createQueryBuilder(__NAMESPACE__ . '\GH665Document')
+        $persisted = $this->dm->createQueryBuilder(GH665Document::class)
             ->hydrate(false)
             ->field('id')->equals($document->id)
             ->getQuery()
             ->getSingleResult();
 
-        $expected = array(
+        $expected = [
             '_id' => $document->id,
-            'embeddedPushAll' => array(array('name' => 'foo')),
-            'embeddedAddToSet' => array(array('name' => 'bar'))
-        );
+            'embeddedPushAll' => [['name' => 'foo']],
+            'embeddedAddToSet' => [['name' => 'bar']],
+        ];
 
         $this->assertEquals($expected, $persisted);
     }
@@ -49,10 +52,10 @@ class GH665Document
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedMany(targetDocument="GH665Embedded", strategy="pushAll") */
+    /** @ODM\EmbedMany(targetDocument=GH665Embedded::class, strategy="pushAll") */
     public $embeddedPushAll;
 
-    /** @ODM\EmbedMany(targetDocument="GH665Embedded", strategy="addToSet") */
+    /** @ODM\EmbedMany(targetDocument=GH665Embedded::class, strategy="addToSet") */
     public $embeddedAddToSet;
 
     public function __construct()

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents\Functional;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -9,12 +11,9 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
  */
 class VirtualHost
 {
-
     /** @ODM\Id */
     protected $id;
-    /**
-     * @ODM\EmbedOne(targetDocument="Documents\Functional\VirtualHostDirective")
-     */
+    /** @ODM\EmbedOne(targetDocument="Documents\Functional\VirtualHostDirective") */
     protected $vhostDirective;
 
     public function getId()
@@ -27,7 +26,7 @@ class VirtualHost
      */
     public function getVHostDirective()
     {
-        if (!$this->vhostDirective) {
+        if (! $this->vhostDirective) {
             $this->vhostDirective = new VirtualHostDirective('VirtualHost', '*:80');
         }
         return $this->vhostDirective;
@@ -39,6 +38,4 @@ class VirtualHost
 
         return $this;
     }
-
 }
-

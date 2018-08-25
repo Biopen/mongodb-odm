@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\DocumentNotFoundException;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Proxy\Proxy;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use function iterator_to_array;
 
-class GH593Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH593Test extends BaseTest
 {
     public function setUp()
     {
@@ -14,14 +19,14 @@ class GH593Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->getFilterCollection()->enable('testFilter');
         $filter = $this->dm->getFilterCollection()->getFilter('testFilter');
-        $filter->setParameter('class', __NAMESPACE__ . '\GH593User');
+        $filter->setParameter('class', GH593User::class);
         $filter->setParameter('field', 'deleted');
         $filter->setParameter('value', false);
     }
 
     public function testReferenceManyOwningSidePreparesFilterCriteria()
     {
-        $class = __NAMESPACE__ . '\GH593User';
+        $class = GH593User::class;
 
         $user1 = new GH593User();
         $user2 = new GH593User();
@@ -51,24 +56,21 @@ class GH593Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
          */
         $this->assertCount(2, $user1following);
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $user1following[0]);
+        $this->assertInstanceOf(Proxy::class, $user1following[0]);
         $this->assertTrue($user1following[0]->__isInitialized());
         $this->assertEquals($user2->getId(), $user1following[0]->getId());
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $user1following[1]);
+        $this->assertInstanceOf(Proxy::class, $user1following[1]);
         $this->assertFalse($user1following[1]->__isInitialized());
         $this->assertEquals($user3->getId(), $user1following[1]->getId());
 
-        try {
-            $user1following[1]->__load();
-            $this->fail('Expected DocumentNotFoundException for filtered Proxy object');
-        } catch (DocumentNotFoundException $e) {
-        }
+        $this->expectException(DocumentNotFoundException::class);
+        $user1following[1]->__load();
     }
 
     public function testReferenceManyInverseSidePreparesFilterCriteria()
     {
-        $class = __NAMESPACE__ . '\GH593User';
+        $class = GH593User::class;
 
         $user1 = new GH593User();
         $user2 = new GH593User();
@@ -105,10 +107,10 @@ class GH593User
     /** @ODM\Field(name="d", type="bool") */
     public $deleted = false;
 
-    /** @ODM\ReferenceMany(targetDocument="GH593User", inversedBy="followedBy", simple=true) */
+    /** @ODM\ReferenceMany(targetDocument=GH593User::class, inversedBy="followedBy", storeAs="id") */
     public $following;
 
-    /** @ODM\ReferenceMany(targetDocument="GH593User", mappedBy="following") */
+    /** @ODM\ReferenceMany(targetDocument=GH593User::class, mappedBy="following") */
     public $followedBy;
 
     public function __construct()
@@ -117,7 +119,7 @@ class GH593User
         $this->followedBy = new ArrayCollection();
     }
 
-    // Return the identifier without triggering Proxy initialization
+    /** Return the identifier without triggering Proxy initialization */
     public function getId()
     {
         return $this->id;

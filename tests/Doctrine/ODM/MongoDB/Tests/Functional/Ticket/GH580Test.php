@@ -1,14 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use MongoDB\Driver\Exception\BulkWriteException;
 
-class GH580Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH580Test extends BaseTest
 {
     public function testDocumentPersisterShouldClearQueuedInsertsOnMongoException()
     {
-        $class = __NAMESPACE__ . '\GH580Document';
+        $class = GH580Document::class;
 
         $schemaManager = $this->dm->getSchemaManager();
         $schemaManager->updateDocumentIndexes($class);
@@ -32,14 +36,14 @@ class GH580Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         try {
             $this->dm->flush();
-            $this->fail('Expected MongoCursorException for duplicate value');
-        } catch (\MongoCursorException $e) {
+            $this->fail('Expected BulkWriteException for duplicate value');
+        } catch (BulkWriteException $e) {
         }
 
         $this->dm->clear($class);
 
         // Remove initial object
-        $doc1 = $repository->findOneByName('foo');
+        $doc1 = $repository->findOneBy(['name' => 'foo']);
         $this->dm->remove($doc1) ;
         $this->dm->flush();
         $this->dm->clear($class);

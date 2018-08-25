@@ -53,7 +53,7 @@ Reference one document:
             // ...
 
             /**
-             * @ReferenceOne(targetDocument="Shipping")
+             * @ReferenceOne(targetDocument=Shipping::class)
              */
             private $shipping;
 
@@ -78,14 +78,6 @@ Reference one document:
           </document>
         </doctrine-mongo-mapping>
 
-    .. code-block:: yaml
-
-        Product:
-          type: document
-          referenceOne:
-            shipping:
-              targetDocument: Documents\Shipping
-
 .. _reference_many:
 
 Reference Many
@@ -105,7 +97,7 @@ Reference many documents:
             // ...
 
             /**
-             * @ReferenceMany(targetDocument="Account")
+             * @ReferenceMany(targetDocument=Account::class)
              */
             private $accounts = array();
 
@@ -129,14 +121,6 @@ Reference many documents:
                 <reference-many field="accounts" target-document="Documents\Account" />
           </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        User:
-          type: document
-          referenceMany:
-            accounts:
-              targetDocument: Documents\Account
 
 .. _reference_mixing_document_types:
 
@@ -167,11 +151,6 @@ omit the ``targetDocument`` option:
 
         <field fieldName="favorites" />
 
-    .. code-block:: yaml
-
-        referenceMany:
-            favorites: ~
-
 Now the ``$favorites`` property can store a reference to any type of document!
 The class name will be automatically stored in a field named
 ``_doctrine_class_name`` within the `DBRef`_ object.
@@ -181,7 +160,7 @@ The class name will be automatically stored in a field named
     The MongoDB shell tends to ignore fields other than ``$id`` and ``$ref``
     when displaying `DBRef`_ objects. You can verify the presence of any ``$db``
     and discriminator fields by querying and examining the document with a
-    driver. See `SERVER-10777 <https://jira.mongodb.org/browse/SERVER-10777>`_ 
+    driver. See `SERVER-10777 <https://jira.mongodb.org/browse/SERVER-10777>`_
     for additional discussion on this issue.
 
 The name of the field within the DBRef object can be customized via the
@@ -211,12 +190,6 @@ The name of the field within the DBRef object can be customized via the
         <reference-many fieldName="favorites">
             <discriminator-field name="type" />
         </reference-many>
-
-    .. code-block:: yaml
-
-        referenceMany:
-          favorites:
-            discriminatorField: type
 
 You can also specify a discriminator map to avoid storing the |FQCN|
 in each `DBRef`_ object:
@@ -253,14 +226,6 @@ in each `DBRef`_ object:
                 <discriminator-mapping value="song" class="Documents\Song" />
             </discriminator-map>
         </reference-many>
-
-    .. code-block:: yaml
-
-        referenceMany:
-          favorites:
-            discriminatorMap:
-              album: Documents\Album
-              song: Documents\Song
 
 If you have references without a discriminator value that should be considered
 a certain class, you can optionally specify a default discriminator value:
@@ -300,15 +265,6 @@ a certain class, you can optionally specify a default discriminator value:
             <default-discriminator-value value="album" />
         </reference-many>
 
-    .. code-block:: yaml
-
-        referenceMany:
-          favorites:
-            discriminatorMap:
-              album: Documents\Album
-              song: Documents\Song
-            defaultDiscriminatorValue: album
-
 .. _storing_references:
 
 Storing References
@@ -317,8 +273,9 @@ Storing References
 By default all references are stored as a `DBRef`_ object with the traditional
 ``$ref``, ``$id``, and (optionally) ``$db`` fields (in that order). For references to
 documents of a single collection, storing the collection (and database) names for
-each reference may be redundant. You can use simple references to store the
-referenced document's identifier (e.g. ``MongoId``) instead of a `DBRef`_.
+each reference may be redundant. You can use ID references to store the
+referenced document's identifier (e.g. ``MongoDB\BSON\ObjectId``) instead of a
+`DBRef`_.
 
 Example:
 
@@ -329,7 +286,7 @@ Example:
         <?php
 
         /**
-         * @ReferenceOne(targetDocument="Profile", storeAs="id")
+         * @ReferenceOne(targetDocument=Profile::class, storeAs="id")
          */
         private $profile;
 
@@ -337,41 +294,32 @@ Example:
 
         <reference-one target-document="Documents\Profile", store-as="id" />
 
-    .. code-block:: yaml
+Now, the ``profile`` field will only store the ``MongoDB\BSON\ObjectId`` of the
+referenced Profile document.
 
-        referenceOne:
-          profile:
-            storeAs: id
-
-Now, the ``profile`` field will only store the ``MongoId`` of the referenced
-Profile document.
-
-Simple references reduce the amount of storage used, both for the document
-itself and any indexes on the reference field; however, simple references cannot
+ID references reduce the amount of storage used, both for the document
+itself and any indexes on the reference field; however, ID references cannot
 be used with discriminators, since there is no `DBRef`_ object in which to store
 a discriminator value.
 
 In addition to saving references as `DBRef`_ with ``$ref``, ``$id``, and ``$db``
-fields and as ``MongoId``, it is possible to save references as `DBRef`_ without
-the ``$db`` field. This solves problems when the database name changes (and also
-reduces the amount of storage used).
+fields and as ``MongoDB\BSON\ObjectId``, it is possible to save references as
+`DBRef`_ without the ``$db`` field. This solves problems when the database name
+changes (and also reduces the amount of storage used).
 
-The ``storeAs`` option has three possible values:
+The ``storeAs`` option has the following possible values:
 
-- **dbRefWithDb**: Uses a `DBRef`_ with ``$ref``, ``$id``, and ``$db`` fields (this is the default)
-- **dbRef**: Uses a `DBRef`_ with ``$ref`` and ``$id``
-- **id**: Uses a ``MongoId``
-
-.. note::
-
-    The ``storeAs=id`` option used to be called a "simple reference". The old syntax is
-    still recognized (so using ``simple=true`` will imply ``storeAs=id``).
+- **dbRefWithDb**: Uses a `DBRef`_ with ``$ref``, ``$id``, and ``$db`` fields
+- **dbRef**: Uses a `DBRef`_ with ``$ref`` and ``$id`` (this is the default)
+- **ref**: Uses a custom embedded object with an ``id`` field
+- **id**: Uses the identifier of the referenced object
 
 .. note::
 
-    For backwards compatibility ``storeAs=dbRefWithDb`` is the default, but
-    ``storeAs=dbRef`` is the recommended setting.
-
+    Up until 2.0 ``storeAs=dbRefWithDb`` was the default setting. If you have data in
+    the old format, you should add ``storeAs=dbRefWithDb`` to all your references, or
+    update the database references (deleting the ``$db`` field) as ``storeAs=dbRef``
+    is the new default setting.
 
 Cascading Operations
 --------------------
@@ -386,7 +334,7 @@ referenced documents. You must explicitly enable this functionality:
         <?php
 
         /**
-         * @ReferenceOne(targetDocument="Profile", cascade={"persist"})
+         * @ReferenceOne(targetDocument=Profile::class, cascade={"persist"})
          */
         private $profile;
 
@@ -397,12 +345,6 @@ referenced documents. You must explicitly enable this functionality:
                 <persist/>
             </cascade>
         </reference-one>
-
-    .. code-block:: yaml
-
-        referenceOne:
-          profile:
-            cascade: [persist]
 
 The valid values are:
 
@@ -449,10 +391,10 @@ and StandingData:
         /** @Id */
         private $id;
 
-        /** @ReferenceOne(targetDocument="StandingData", orphanRemoval=true) */
+        /** @ReferenceOne(targetDocument=StandingData::class, orphanRemoval=true) */
         private $standingData;
 
-        /** @ReferenceMany(targetDocument="Address", mappedBy="contact", orphanRemoval=true) */
+        /** @ReferenceMany(targetDocument=Address::class, mappedBy="contact", orphanRemoval=true) */
         private $addresses;
 
         public function __construct()
@@ -460,12 +402,12 @@ and StandingData:
             $this->addresses = new ArrayCollection();
         }
 
-        public function newStandingData(StandingData $sd)
+        public function newStandingData(StandingData $sd): void
         {
             $this->standingData = $sd;
         }
 
-        public function removeAddress($pos)
+        public function removeAddress($pos): void
         {
             unset($this->addresses[$pos]);
         }

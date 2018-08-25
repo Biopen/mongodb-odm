@@ -1,25 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\Common\EventSubscriber;
 use Doctrine\ODM\MongoDB\Events;
+use Doctrine\ODM\MongoDB\LockException;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Doctrine\ODM\MongoDB\Tests\QueryLogger;
 use Documents\Phonebook;
 use Documents\Phonenumber;
 use Documents\User;
 use Documents\VersionedUser;
+use function get_class;
 
-class CommitImprovementTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class CommitImprovementTest extends BaseTest
 {
-    /**
-     * @var Doctrine\ODM\MongoDB\Tests\QueryLogger
-     */
+    /** @var Doctrine\ODM\MongoDB\Tests\QueryLogger */
     private $ql;
 
     protected function getConfiguration()
     {
-        if ( ! isset($this->ql)) {
+        $this->markTestSkipped('mongodb-driver: query logging does not exist');
+        if (! isset($this->ql)) {
             $this->ql = new QueryLogger();
         }
 
@@ -67,8 +71,7 @@ class CommitImprovementTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $troll->setVersion(3);
         try {
             $this->dm->flush();
-        } catch (\Doctrine\ODM\MongoDB\LockException $ex) {
-
+        } catch (LockException $ex) {
         }
 
         $this->dm->clear();
@@ -96,10 +99,10 @@ class CommitImprovementTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->assertCount(1, $user->getPhonenumbers()); // so we got a number on postPersist
         $this->assertTrue($user->getPhonenumbers()->isDirty()); // but they should be dirty
-        
+
         $collection = $this->dm->getDocumentCollection(get_class($user));
         $inDb = $collection->findOne();
-        $this->assertTrue( ! isset($inDb['phonenumbers']), 'Collection modified in postPersist should not be in database without recomputing change set');
+        $this->assertArrayNotHasKey('phonenumbers', $inDb, 'Collection modified in postPersist should not be in database without recomputing change set');
 
         $this->dm->flush();
         $this->assertCount(2, $user->getPhonenumbers()); // so we got a number on postUpdate
@@ -136,22 +139,22 @@ class CommitImprovementTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
 class PhonenumberMachine implements EventSubscriber
 {
-    private $numbers = array('12345678', '87654321');
+    private $numbers = ['12345678', '87654321'];
 
     private $numberId = 0;
 
     public function getSubscribedEvents()
     {
-        return array(
+        return [
             Events::postPersist,
             Events::postUpdate,
-        );
+        ];
     }
 
     public function __call($eventName, $args)
     {
         $document = $args[0]->getDocument();
-        if ( ! ($document instanceof User)) {
+        if (! ($document instanceof User)) {
             return;
         }
         // hey I just met you, and this is crazy!
@@ -160,13 +163,15 @@ class PhonenumberMachine implements EventSubscriber
 
         // recomputing change set in postPersist will schedule document for update
         // which would be handled in same commit(), we're not checking for this
-        if ($eventName === Events::postUpdate) {
-            // prove that even this won't break our flow
-            $dm = $args[0]->getDocumentManager();
-            $dm->getUnitOfWork()->recomputeSingleDocumentChangeSet(
-                    $dm->getClassMetadata(get_class($document)),
-                    $document
-            );
+        if ($eventName !== Events::postUpdate) {
+            return;
         }
+
+        // prove that even this won't break our flow
+        $dm = $args[0]->getDocumentManager();
+        $dm->getUnitOfWork()->recomputeSingleDocumentChangeSet(
+            $dm->getClassMetadata(get_class($document)),
+            $document
+        );
     }
 }

@@ -1,21 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Tools;
 
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Events;
-use Doctrine\ODM\MongoDB\Tools\ResolveTargetDocumentListener;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Doctrine\ODM\MongoDB\Tools\ResolveTargetDocumentListener;
 
-class ResolveTargetDocumentListenerTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class ResolveTargetDocumentListenerTest extends BaseTest
 {
-    /**
-     * @var \Doctrine\ODM\MongoDB\DocumentManager
-     */
+    /** @var DocumentManager */
     protected $dm;
 
-    /**
-     * @var ResolveTargetDocumentListener
-     */
+    /** @var ResolveTargetDocumentListener */
     protected $listener;
 
     public function setUp()
@@ -30,26 +30,26 @@ class ResolveTargetDocumentListenerTest extends \Doctrine\ODM\MongoDB\Tests\Base
         $evm = $this->dm->getEventManager();
 
         $this->listener->addResolveTargetDocument(
-            'Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetInterface',
-            'Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetDocument',
-            array()
+            ResolveTargetInterface::class,
+            ResolveTargetDocument::class,
+            []
         );
 
         $this->listener->addResolveTargetDocument(
-            'Doctrine\ODM\MongoDB\Tests\Tools\TargetInterface',
-            'Doctrine\ODM\MongoDB\Tests\Tools\TargetDocument',
-            array()
+            TargetInterface::class,
+            TargetDocument::class,
+            []
         );
 
         $evm->addEventListener(Events::loadClassMetadata, $this->listener);
 
-        $cm = $this->dm->getClassMetadata('Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetDocument');
+        $cm = $this->dm->getClassMetadata(ResolveTargetDocument::class);
         $meta = $cm->associationMappings;
 
-        $this->assertSame('Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetDocument', $meta['refOne']['targetDocument']);
-        $this->assertSame('Doctrine\ODM\MongoDB\Tests\Tools\TargetDocument', $meta['refMany']['targetDocument']);
-        $this->assertSame('Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetDocument', $meta['embedOne']['targetDocument']);
-        $this->assertSame('Doctrine\ODM\MongoDB\Tests\Tools\TargetDocument', $meta['embedMany']['targetDocument']);
+        $this->assertSame(ResolveTargetDocument::class, $meta['refOne']['targetDocument']);
+        $this->assertSame(TargetDocument::class, $meta['refMany']['targetDocument']);
+        $this->assertSame(ResolveTargetDocument::class, $meta['embedOne']['targetDocument']);
+        $this->assertSame(TargetDocument::class, $meta['embedMany']['targetDocument']);
     }
 }
 
@@ -67,29 +67,19 @@ interface TargetInterface extends ResolveTargetInterface
  */
 class ResolveTargetDocument implements ResolveTargetInterface
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     private $id;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetInterface")
-     */
+    /** @ODM\ReferenceOne(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetInterface") */
     private $refOne;
 
-    /**
-     * @ODM\ReferenceMany(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\TargetInterface")
-     */
+    /** @ODM\ReferenceMany(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\TargetInterface") */
     private $refMany;
 
-    /**
-     * @ODM\EmbedOne(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetInterface")
-     */
+    /** @ODM\EmbedOne(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\ResolveTargetInterface") */
     private $embedOne;
 
-    /**
-     * @ODM\EmbedMany(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\TargetInterface")
-     */
+    /** @ODM\EmbedMany(targetDocument="Doctrine\ODM\MongoDB\Tests\Tools\TargetInterface") */
     private $embedMany;
 
     public function getId()
@@ -103,9 +93,7 @@ class ResolveTargetDocument implements ResolveTargetInterface
  */
 class TargetDocument implements TargetInterface
 {
-    /**
-     * @ODM\Id
-     */
+    /** @ODM\Id */
     private $id;
 
     public function getId()

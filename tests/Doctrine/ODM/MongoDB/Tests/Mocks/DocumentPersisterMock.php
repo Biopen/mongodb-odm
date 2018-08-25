@@ -1,74 +1,77 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Mocks;
+
+use Doctrine\ODM\MongoDB\Persisters\DocumentPersister;
 
 /**
  * DocumentPersister implementation used for mocking during tests.
  */
-class DocumentPersisterMock extends \Doctrine\ODM\MongoDB\Persisters\DocumentPersister
+class DocumentPersisterMock extends DocumentPersister
 {
-    private $inserts = array();
-    private $upserts = array();
-    private $updates = array();
-    private $deletes = array();
+    private $inserts = [];
+    private $upserts = [];
+    private $updates = [];
+    private $deletes = [];
     private $identityColumnValueCounter = 1;
-    private $mockIdGeneratorType;
-    private $postInsertIds = array();
+    private $postInsertIds = [];
     private $existsCalled = false;
 
-    public function insert($document, array $options = array())
+    public function insert($document, array $options = [])
     {
         $this->inserts[] = $document;
         $id = $this->identityColumnValueCounter++;
-        $this->postInsertIds[$id] = array($id, $document);
+        $this->postInsertIds[$id] = [$id, $document];
         return $id;
     }
 
-    public function addInsert($document)
+    public function addInsert(object $document): void
     {
         $this->inserts[] = $document;
         $id = $this->identityColumnValueCounter++;
-        $this->postInsertIds[$id] = array($id, $document);
-        return $id;
+        $this->postInsertIds[$id] = [$id, $document];
     }
 
-    public function addUpsert($document)
+    public function addUpsert(object $document): void
     {
         $this->upserts[] = $document;
         $id = $this->identityColumnValueCounter++;
-        $this->postInsertIds[$id] = array($id, $document);
-        return $id;
+        $this->postInsertIds[$id] = [$id, $document];
     }
 
-    public function executeInserts(array $options = array())
+    public function executeInserts(array $options = []): void
     {
     }
 
-    public function executeUpserts(array $options = array())
+    public function executeUpserts(array $options = []): void
     {
     }
 
-    public function update($document, array $options = array())
+    public function update(object $document, array $options = []): void
     {
         $this->updates[] = $document;
     }
 
-    public function exists($document)
+    public function exists($document): bool
     {
         $this->existsCalled = true;
+
+        return false;
     }
 
-    public function delete($document, array $options = array())
+    public function delete(object $document, array $options = []): void
     {
         $this->deletes[] = $document;
     }
 
-    public function getInserts()
+    public function getInserts(): array
     {
         return $this->inserts;
     }
 
-    public function getUpserts()
+    public function getUpserts(): array
     {
         return $this->upserts;
     }
@@ -87,9 +90,9 @@ class DocumentPersisterMock extends \Doctrine\ODM\MongoDB\Persisters\DocumentPer
     {
         $this->existsCalled = false;
         $this->identityColumnValueCounter = 1;
-        $this->inserts = array();
-        $this->updates = array();
-        $this->deletes = array();
+        $this->inserts = [];
+        $this->updates = [];
+        $this->deletes = [];
     }
 
     public function isExistsCalled()

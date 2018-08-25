@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class MODM45Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class MODM45Test extends BaseTest
 {
     public function testTest()
     {
@@ -15,8 +18,8 @@ class MODM45Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $a = $this->dm->find(__NAMESPACE__.'\MODM45A', $a->getId());
-        $c = (null !== $a->getB()); 
+        $a = $this->dm->find(MODM45A::class, $a->getId());
+        $c = ($a->getB() !== null);
         $this->assertTrue($c); // returns false, while expecting true
     }
 }
@@ -27,12 +30,21 @@ class MODM45A
     /** @ODM\Id */
     protected $id;
 
-    /** @ODM\EmbedOne(targetDocument="MODM45B") */
+    /** @ODM\EmbedOne(targetDocument=MODM45B::class) */
     protected $b;
 
-    function getId()  {return $this->id;}
-    function getB()   {return $this->b;}
-    function setB($b) {$this->b = $b;}
+    public function getId()
+    {
+        return $this->id;
+    }
+    public function getB()
+    {
+        return $this->b;
+    }
+    public function setB($b)
+    {
+        $this->b = $b;
+    }
 }
 
 /** @ODM\EmbeddedDocument */
@@ -40,6 +52,13 @@ class MODM45B
 {
     /** @ODM\Field(type="string") */
     protected $val;
-    function setVal($val) {$this->val = $val;}
-    function getVal() {return $this->val;}
+
+    public function setVal($val)
+    {
+        $this->val = $val;
+    }
+    public function getVal()
+    {
+        return $this->val;
+    }
 }

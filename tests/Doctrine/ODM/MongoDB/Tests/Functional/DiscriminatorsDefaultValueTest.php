@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class ReferenceDiscriminatorsDefaultValueTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class ReferenceDiscriminatorsDefaultValueTest extends BaseTest
 {
     public function setUp()
     {
@@ -20,27 +23,27 @@ class ReferenceDiscriminatorsDefaultValueTest extends \Doctrine\ODM\MongoDB\Test
         $this->dm->persist($firstChildWithoutDiscriminator = new ChildDocumentWithoutDiscriminator('firstWithoutDiscriminator'));
         $this->dm->persist($secondChildWithoutDiscriminator = new ChildDocumentWithoutDiscriminator('firstWithoutDiscriminator'));
 
-        $children = array($firstChildWithoutDiscriminator, $secondChildWithoutDiscriminator);
+        $children = [$firstChildWithoutDiscriminator, $secondChildWithoutDiscriminator];
         $this->dm->persist($parentWithoutDiscriminator = new ParentDocumentWithoutDiscriminator($children));
 
         $this->dm->flush();
         $this->dm->clear();
 
-        $childWithDiscriminator = $this->dm->find(__NAMESPACE__ . '\ChildDocumentWithDiscriminator', $firstChildWithoutDiscriminator->getId());
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorSimple', $childWithDiscriminator);
+        $childWithDiscriminator = $this->dm->find(ChildDocumentWithDiscriminator::class, $firstChildWithoutDiscriminator->getId());
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorSimple::class, $childWithDiscriminator);
         $this->assertSame('firstWithoutDiscriminator', $childWithDiscriminator->getType(), 'New mapping correctly loads legacy document');
 
-        $parentWithDiscriminator = $this->dm->find(__NAMESPACE__ . '\ParentDocumentWithDiscriminator', $parentWithoutDiscriminator->getId());
+        $parentWithDiscriminator = $this->dm->find(ParentDocumentWithDiscriminator::class, $parentWithoutDiscriminator->getId());
         $this->assertNotNull($parentWithDiscriminator);
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorSimple', $parentWithDiscriminator->getReferencedChild(), 'Referenced document correctly respects defaultDiscriminatorValue in referenceOne mapping');
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorSimple', $parentWithDiscriminator->getEmbeddedChild(), 'Embedded document correctly respects defaultDiscriminatorValue in referenceOne mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorSimple::class, $parentWithDiscriminator->getReferencedChild(), 'Referenced document correctly respects defaultDiscriminatorValue in referenceOne mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorSimple::class, $parentWithDiscriminator->getEmbeddedChild(), 'Embedded document correctly respects defaultDiscriminatorValue in referenceOne mapping');
 
         foreach ($parentWithDiscriminator->getReferencedChildren() as $child) {
-            $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorSimple', $child, 'Referenced document correctly respects defaultDiscriminatorValue in referenceMany mapping');
+            $this->assertInstanceOf(ChildDocumentWithDiscriminatorSimple::class, $child, 'Referenced document correctly respects defaultDiscriminatorValue in referenceMany mapping');
         }
 
         foreach ($parentWithDiscriminator->getEmbeddedChildren() as $child) {
-            $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorSimple', $child, 'Embedded document correctly respects defaultDiscriminatorValue in referenceMany mapping');
+            $this->assertInstanceOf(ChildDocumentWithDiscriminatorSimple::class, $child, 'Embedded document correctly respects defaultDiscriminatorValue in referenceMany mapping');
         }
     }
 
@@ -52,31 +55,31 @@ class ReferenceDiscriminatorsDefaultValueTest extends \Doctrine\ODM\MongoDB\Test
         $this->dm->persist($firstChildWithDiscriminator = new ChildDocumentWithDiscriminatorComplex('firstWithDiscriminator', 'veryComplex'));
         $this->dm->persist($secondChildWithDiscriminator = new ChildDocumentWithDiscriminatorSimple('secondWithDiscriminator'));
 
-        $children = array($firstChildWithDiscriminator, $secondChildWithDiscriminator);
+        $children = [$firstChildWithDiscriminator, $secondChildWithDiscriminator];
         $this->dm->persist($parentWithDiscriminator = new ParentDocumentWithDiscriminator($children));
 
         $this->dm->flush();
         $this->dm->clear();
 
-        $parentWithDiscriminator = $this->dm->find(__NAMESPACE__ . '\ParentDocumentWithDiscriminator', $parentWithDiscriminator->getId());
+        $parentWithDiscriminator = $this->dm->find(ParentDocumentWithDiscriminator::class, $parentWithDiscriminator->getId());
         $this->assertNotNull($parentWithDiscriminator);
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorComplex', $parentWithDiscriminator->getReferencedChild(), 'Referenced document respects discriminatorValue if it is present in referenceOne mapping');
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorComplex', $parentWithDiscriminator->getEmbeddedChild(), 'Embedded document respects discriminatorValue if it is present in referenceOne mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorComplex::class, $parentWithDiscriminator->getReferencedChild(), 'Referenced document respects discriminatorValue if it is present in referenceOne mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorComplex::class, $parentWithDiscriminator->getEmbeddedChild(), 'Embedded document respects discriminatorValue if it is present in referenceOne mapping');
 
         // Check referenceMany mapping
         $referencedChildren = $parentWithDiscriminator->getReferencedChildren()->toArray();
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorComplex', $referencedChildren[0], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorComplex::class, $referencedChildren[0], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
         $this->assertSame('firstWithDiscriminator', $referencedChildren[0]->getType());
 
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorSimple', $referencedChildren[1], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorSimple::class, $referencedChildren[1], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
         $this->assertSame('secondWithDiscriminator', $referencedChildren[1]->getType());
 
         // Check embedMany mapping
         $referencedChildren = $parentWithDiscriminator->getEmbeddedChildren()->toArray();
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorComplex', $referencedChildren[0], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorComplex::class, $referencedChildren[0], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
         $this->assertSame('firstWithDiscriminator', $referencedChildren[0]->getType());
 
-        $this->assertInstanceOf(__NAMESPACE__ . '\ChildDocumentWithDiscriminatorSimple', $referencedChildren[1], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
+        $this->assertInstanceOf(ChildDocumentWithDiscriminatorSimple::class, $referencedChildren[1], 'Referenced document respects discriminatorValue if it is present in referenceMany mapping');
         $this->assertSame('secondWithDiscriminator', $referencedChildren[1]->getType());
     }
 }
@@ -159,16 +162,16 @@ abstract class ChildDocument
 /** @ODM\Document(collection="discriminator_parent") */
 class ParentDocumentWithoutDiscriminator extends ParentDocument
 {
-    /** @ODM\ReferenceOne(targetDocument="ChildDocumentWithoutDiscriminator") */
+    /** @ODM\ReferenceOne(targetDocument=ChildDocumentWithoutDiscriminator::class) */
     protected $referencedChild;
 
-    /** @ODM\ReferenceMany(targetDocument="ChildDocumentWithoutDiscriminator") */
+    /** @ODM\ReferenceMany(targetDocument=ChildDocumentWithoutDiscriminator::class) */
     protected $referencedChildren;
 
-    /** @ODM\EmbedOne(targetDocument="ChildDocumentWithoutDiscriminator") */
+    /** @ODM\EmbedOne(targetDocument=ChildDocumentWithoutDiscriminator::class) */
     protected $embeddedChild;
 
-    /** @ODM\EmbedMany(targetDocument="ChildDocumentWithoutDiscriminator") */
+    /** @ODM\EmbedMany(targetDocument=ChildDocumentWithoutDiscriminator::class) */
     protected $embeddedChildren;
 }
 
@@ -181,16 +184,16 @@ class ChildDocumentWithoutDiscriminator extends ChildDocument
 /** @ODM\Document(collection="discriminator_parent") */
 class ParentDocumentWithDiscriminator extends ParentDocument
 {
-    /** @ODM\ReferenceOne(targetDocument="ChildDocumentWithDiscriminator") */
+    /** @ODM\ReferenceOne(targetDocument=ChildDocumentWithDiscriminator::class) */
     protected $referencedChild;
 
-    /** @ODM\ReferenceMany(targetDocument="ChildDocumentWithDiscriminator") */
+    /** @ODM\ReferenceMany(targetDocument=ChildDocumentWithDiscriminator::class) */
     protected $referencedChildren;
 
-    /** @ODM\EmbedOne(targetDocument="ChildDocumentWithDiscriminator") */
+    /** @ODM\EmbedOne(targetDocument=ChildDocumentWithDiscriminator::class) */
     protected $embeddedChild;
 
-    /** @ODM\EmbedMany(targetDocument="ChildDocumentWithDiscriminator") */
+    /** @ODM\EmbedMany(targetDocument=ChildDocumentWithDiscriminator::class) */
     protected $embeddedChildren;
 }
 
@@ -198,12 +201,11 @@ class ParentDocumentWithDiscriminator extends ParentDocument
  * @ODM\Document(collection="discriminator_child")
  * @ODM\InheritanceType("SINGLE_COLLECTION")
  * @ODM\DiscriminatorField("discriminator")
- * @ODM\DiscriminatorMap({"simple"="ChildDocumentWithDiscriminatorSimple", "complex"="ChildDocumentWithDiscriminatorComplex"})
+ * @ODM\DiscriminatorMap({"simple"=ChildDocumentWithDiscriminatorSimple::class, "complex"=ChildDocumentWithDiscriminatorComplex::class})
  * @ODM\DefaultDiscriminatorValue("simple")
  */
 class ChildDocumentWithDiscriminator extends ChildDocument
 {
-
 }
 
 /** @ODM\Document(collection="discriminator_child") */

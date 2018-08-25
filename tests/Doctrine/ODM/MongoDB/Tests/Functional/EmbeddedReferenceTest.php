@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
-use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
-
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class EmbeddedReferenceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class EmbeddedReferenceTest extends BaseTest
 {
     public function testReferencedDocumentInsideEmbeddedDocument()
     {
@@ -46,7 +48,7 @@ class EmbeddedReferenceTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $offer = $this->dm->getRepository(__NAMESPACE__ . '\Offer')->findOneByName('My Offer');
+        $offer = $this->dm->getRepository(Offer::class)->findOneBy(['name' => 'My Offer']);
 
         // Should be: 1 Link, 5 referenced documents
         // Actual Result: 1 link, 10 referenced documents
@@ -64,7 +66,7 @@ class Offer
     /** @ODM\Field(type="string") */
     public $name;
 
-    /** @ODM\EmbedMany(targetDocument="Link") */
+    /** @ODM\EmbedMany(targetDocument=Link::class) */
     public $links;
 
     public function __construct($name)
@@ -83,7 +85,7 @@ class Link
     /** @ODM\Field(type="string") */
     public $url;
 
-    /** @ODM\ReferenceMany(targetDocument="ReferencedDocument") */
+    /** @ODM\ReferenceMany(targetDocument=ReferencedDocument::class) */
     public $referencedDocuments;
 
     public function __construct($url)

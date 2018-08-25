@@ -1,30 +1,24 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Id;
 
 use Doctrine\ODM\MongoDB\DocumentManager;
+use function chr;
+use function hexdec;
+use function mt_rand;
+use function php_uname;
+use function preg_match;
+use function sha1;
+use function sprintf;
+use function str_replace;
+use function strlen;
+use function substr;
 
 /**
  * Generates UUIDs.
  *
- * @since       1.0
  */
 class UuidGenerator extends AbstractIdGenerator
 {
@@ -37,10 +31,8 @@ class UuidGenerator extends AbstractIdGenerator
 
     /**
      * Used to set the salt that will be applied to each id
-     *
-     * @param string $salt The sale to use
      */
-    public function setSalt($salt)
+    public function setSalt(string $salt): void
     {
         $this->salt = $salt;
     }
@@ -50,18 +42,15 @@ class UuidGenerator extends AbstractIdGenerator
      *
      * @return string $salt The current salt
      */
-    public function getSalt()
+    public function getSalt(): string
     {
         return $this->salt;
     }
 
     /**
      * Checks that a given string is a valid uuid.
-     *
-     * @param string $uuid The string to check.
-     * @return boolean
      */
-    public function isValid($uuid)
+    public function isValid(string $uuid): bool
     {
         return preg_match('/^\{?[0-9a-f]{8}\-?[0-9a-f]{4}\-?[0-9a-f]{4}\-?[0-9a-f]{4}\-?[0-9a-f]{12}\}?$/i', $uuid)
             === 1;
@@ -70,11 +59,13 @@ class UuidGenerator extends AbstractIdGenerator
     /**
      * Generates a new UUID
      *
-     * @param DocumentManager $dm Not used.
-     * @param object $document Not used.
+     * @param DocumentManager $dm       Not used.
+     * @param object          $document Not used.
+     *
      * @return string UUID
+     * @throws \Exception
      */
-    public function generate(DocumentManager $dm, $document)
+    public function generate(DocumentManager $dm, object $document)
     {
         $uuid = $this->generateV4();
         return $this->generateV5($uuid, $this->salt ?: php_uname('n'));
@@ -82,10 +73,8 @@ class UuidGenerator extends AbstractIdGenerator
 
     /**
      * Generates a v4 UUID
-     *
-     * @return string
      */
-    public function generateV4()
+    public function generateV4(): string
     {
         return sprintf(
             '%04x%04x%04x%04x%04x%04x%04x%04x',
@@ -111,19 +100,16 @@ class UuidGenerator extends AbstractIdGenerator
     /**
      * Generates a v5 UUID
      *
-     * @param string $namespace The UUID to seed with
-     * @param string $salt The string to salt this new UUID with
-     * @throws \Exception when the provided namespace is invalid
-     * @return string
+     * @throws \Exception When the provided namespace is invalid.
      */
-    public function generateV5($namespace, $salt)
+    public function generateV5(string $namespace, string $salt): string
     {
-        if ( ! $this->isValid($namespace)) {
+        if (! $this->isValid($namespace)) {
             throw new \Exception('Provided $namespace is invalid: ' . $namespace);
         }
 
         // Get hexadecimal components of namespace
-        $nhex = str_replace(array('-', '{', '}'), '', $namespace);
+        $nhex = str_replace(['-', '{', '}'], '', $namespace);
 
         // Binary Value
         $nstr = '';

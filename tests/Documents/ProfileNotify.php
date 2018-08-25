@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\Common\Collections\ArrayCollection;
@@ -19,14 +21,14 @@ class ProfileNotify implements NotifyPropertyChanged
     /** @ODM\Field */
     private $lastName;
 
-    /** @ODM\ReferenceOne(targetDocument="File", cascade={"all"}) */
+    /** @ODM\ReferenceOne(targetDocument=File::class, cascade={"all"}) */
     private $image;
 
-    /** @ODM\ReferenceMany(targetDocument="File", cascade={"all"}, collectionClass="ProfileNotifyImagesCollection") */
+    /** @ODM\ReferenceMany(targetDocument=File::class, cascade={"all"}, collectionClass=ProfileNotifyImagesCollection::class) */
     private $images;
 
     /** @var PropertyChangedListener[] */
-    private $listeners = array();
+    private $listeners = [];
 
     public function __construct()
     {

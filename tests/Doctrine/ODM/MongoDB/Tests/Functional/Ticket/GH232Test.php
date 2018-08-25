@@ -1,14 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-/**
- * @since 6/26/12
- */
-class GH232Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH232Test extends BaseTest
 {
     public function testReferencedDocumentInsideEmbeddedDocument()
     {
@@ -30,7 +30,7 @@ class GH232Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $product = $this->dm->getRepository(__NAMESPACE__ . '\Product')->findOneByName('Product');
+        $product = $this->dm->getRepository(Product::class)->findOneBy(['name' => 'Product']);
 
         $this->assertEquals(1, $product->subproducts->count());
         $this->assertEquals(1, $product->subproducts[0]->prices->count());
@@ -46,11 +46,11 @@ class Product
     /** @ODM\Field(type="string") */
     public $name;
 
-    /** @ODM\EmbedMany(targetDocument="Price") */
-    public $prices = array();
+    /** @ODM\EmbedMany(targetDocument=Price::class) */
+    public $prices = [];
 
-    /** @ODM\EmbedMany(targetDocument="SubProduct") */
-    public $subproducts = array();
+    /** @ODM\EmbedMany(targetDocument=SubProduct::class) */
+    public $subproducts = [];
 
     public function __construct($name)
     {
@@ -62,8 +62,8 @@ class Product
 /** @ODM\EmbeddedDocument */
 class SubProduct
 {
-    /** @ODM\EmbedMany(targetDocument="Price") */
-    public $prices = array();
+    /** @ODM\EmbedMany(targetDocument=Price::class) */
+    public $prices = [];
 
     public function __construct()
     {

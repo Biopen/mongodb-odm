@@ -1,18 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
-use Doctrine\ODM\MongoDB\DocumentRepository;
+use Doctrine\ODM\MongoDB\Repository\DocumentRepository;
 
 /** FIXME: reflection chokes if this class doesn't have a doc comment */
 class CommentRepository extends DocumentRepository
 {
     public function findOneComment()
     {
-        return $this->getDocumentPersister()->loadAll()
-            ->sort(array('date' => 'desc'))
-            ->limit(1)
-            ->getSingleResult();
+        return $this->getDocumentPersister()
+            ->loadAll([], ['date' => 'desc'], 1)
+            ->current();
     }
 
     public function findManyComments()

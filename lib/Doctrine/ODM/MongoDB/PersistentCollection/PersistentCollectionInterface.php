@@ -1,21 +1,6 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\PersistentCollection;
 
@@ -28,14 +13,12 @@ use Doctrine\ODM\MongoDB\MongoDBException;
  * Interface for persistent collection classes.
  *
  * @internal
- * @since 1.1
  */
 interface PersistentCollectionInterface extends Collection
 {
     /**
      * Sets the document manager and unit of work (used during merge operations).
      *
-     * @param DocumentManager $dm
      */
     public function setDocumentManager(DocumentManager $dm);
 
@@ -77,14 +60,14 @@ interface PersistentCollectionInterface extends Collection
      * Gets a boolean flag indicating whether this collection is dirty which means
      * its state needs to be synchronized with the database.
      *
-     * @return boolean TRUE if the collection is dirty, FALSE otherwise.
+     * @return bool TRUE if the collection is dirty, FALSE otherwise.
      */
     public function isDirty();
 
     /**
      * Sets a boolean flag, indicating whether this collection is dirty.
      *
-     * @param boolean $dirty Whether the collection should be marked dirty or not.
+     * @param bool $dirty Whether the collection should be marked dirty or not.
      */
     public function setDirty($dirty);
 
@@ -94,7 +77,7 @@ interface PersistentCollectionInterface extends Collection
      * describes the association between the owner and the elements of the collection.
      *
      * @param object $document
-     * @param array $mapping
+     * @param array  $mapping
      */
     public function setOwner($document, array $mapping);
 
@@ -174,14 +157,14 @@ interface PersistentCollectionInterface extends Collection
     /**
      * Sets the initialized flag of the collection, forcing it into that state.
      *
-     * @param boolean $bool
+     * @param bool $bool
      */
     public function setInitialized($bool);
 
     /**
      * Checks whether this collection has been initialized.
      *
-     * @return boolean
+     * @return bool
      */
     public function isInitialized();
 

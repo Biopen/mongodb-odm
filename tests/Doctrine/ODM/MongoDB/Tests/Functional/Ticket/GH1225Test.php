@@ -1,11 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use function get_class;
 
-class GH1225Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH1225Test extends BaseTest
 {
     public function testRemoveAddEmbeddedDocToExistingDocumentWithPreUpdateHook()
     {
@@ -36,7 +40,7 @@ class GH1225Document
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedMany(strategy="atomicSet", targetDocument="GH1225EmbeddedDocument") */
+    /** @ODM\EmbedMany(strategy="atomicSet", targetDocument=GH1225EmbeddedDocument::class) */
     public $embeds;
 
     public function __construct()

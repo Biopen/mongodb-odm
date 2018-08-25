@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
-use MongoId;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use MongoDB\BSON\ObjectId;
 
-class GH942Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH942Test extends BaseTest
 {
     public function testDiscriminatorValueUsesClassNameIfMapIsNotDefined()
     {
@@ -17,7 +20,7 @@ class GH942Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->clear();
 
         $doc = $this->dm->getDocumentCollection(GH942Document::CLASSNAME)
-            ->findOne(array('_id' => new MongoId($doc->id)));
+            ->findOne(['_id' => new ObjectId($doc->id)]);
 
         $this->assertSame('foo', $doc['name']);
         $this->assertSame(GH942Document::CLASSNAME, $doc['type']);
@@ -36,13 +39,13 @@ class GH942Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->clear();
 
         $parent = $this->dm->getDocumentCollection(GH942DocumentParent::CLASSNAME)
-            ->findOne(array('_id' => new MongoId($parent->id)));
+            ->findOne(['_id' => new ObjectId($parent->id)]);
 
         $this->assertSame('parent', $parent['name']);
         $this->assertSame('p', $parent['type']);
 
         $child = $this->dm->getDocumentCollection(GH942DocumentChild::CLASSNAME)
-            ->findOne(array('_id' => new MongoId($child->id)));
+            ->findOne(['_id' => new ObjectId($child->id)]);
 
         $this->assertSame('child', $child['name']);
         $this->assertSame(GH942DocumentChild::CLASSNAME, $child['type']);
@@ -56,7 +59,7 @@ class GH942Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
  */
 class GH942Document
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 
     /** @ODM\Id */
     public $id;
@@ -69,11 +72,11 @@ class GH942Document
  * @ODM\Document
  * @ODM\InheritanceType("SINGLE_COLLECTION")
  * @ODM\DiscriminatorField("type")
- * @ODM\DiscriminatorMap({"p"="GH942DocumentParent"})
+ * @ODM\DiscriminatorMap({"p"=GH942DocumentParent::class})
  */
 class GH942DocumentParent
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 
     /** @ODM\Id */
     public $id;
@@ -85,5 +88,5 @@ class GH942DocumentParent
 /** @ODM\Document */
 class GH942DocumentChild extends GH942DocumentParent
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 }

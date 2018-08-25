@@ -1,19 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class MappedSuperclassTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class MappedSuperclassTest extends BaseTest
 {
     public function testCRUD()
     {
-        $e = new DocumentSubClass;
+        $e = new DocumentSubClass();
         $e->setId(1);
         $e->setName('Roman');
         $e->setMapped1(42);
         $e->setMapped2('bar');
-        
+
         $related = new MappedSuperclassRelated1();
         $related->setId(1);
         $related->setName('Related');
@@ -24,12 +27,12 @@ class MappedSuperclassTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $e2 = $this->dm->find('Doctrine\ODM\MongoDB\Tests\Functional\DocumentSubClass', 1);
+        $e2 = $this->dm->find(DocumentSubClass::class, 1);
         $this->assertNotNull($e2);
         $this->assertEquals(1, $e2->getId());
         $this->assertEquals('Roman', $e2->getName());
         $this->assertNotNull($e2->getMappedRelated1());
-        $this->assertInstanceOf(__NAMESPACE__.'\MappedSuperclassRelated1', $e2->getMappedRelated1());
+        $this->assertInstanceOf(MappedSuperclassRelated1::class, $e2->getMappedRelated1());
         $this->assertEquals(42, $e2->getMapped1());
         $this->assertEquals('bar', $e2->getMapped2());
     }
@@ -44,12 +47,8 @@ class MappedSuperclassBase
     /** @ODM\Field(type="string") */
     private $mapped2;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="MappedSuperclassRelated1")
-     */
+    /** @ODM\ReferenceOne(targetDocument=MappedSuperclassRelated1::class) */
     private $mappedRelated1;
-
-    private $transient;
 
     public function setMapped1($val)
     {
@@ -95,17 +94,17 @@ class MappedSuperclassRelated1
     {
         $this->name = $name;
     }
-    
+
     public function getName()
     {
         return $this->name;
     }
-    
+
     public function setId($id)
     {
         $this->id = $id;
     }
-    
+
     public function getId()
     {
         return $this->id;
@@ -120,22 +119,22 @@ class DocumentSubClass extends MappedSuperclassBase
 
     /** @ODM\Field(type="string") */
     private $name;
-    
+
     public function setName($name)
     {
         $this->name = $name;
     }
-    
+
     public function getName()
     {
         return $this->name;
     }
-    
+
     public function setId($id)
     {
         $this->id = $id;
     }
-    
+
     public function getId()
     {
         return $this->id;

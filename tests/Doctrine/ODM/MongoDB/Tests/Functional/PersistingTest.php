@@ -1,14 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
-use Doctrine\ODM\MongoDB\Mongo;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\Account;
-use Documents\Address;
-use Documents\Phonenumber;
 use Documents\User;
 
-class PersistingTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class PersistingTest extends BaseTest
 {
     public function testCascadeInsertUpdateAndRemove()
     {
@@ -44,14 +44,14 @@ class PersistingTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->find('Documents\User', $user->getId());
+        $user = $this->dm->find(User::class, $user->getId());
 
         $this->assertNotNull($user);
         $user->setUsername('w00t');
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->find('Documents\User', $user->getId());
+        $user = $this->dm->find(User::class, $user->getId());
         $this->assertNotNull($user);
         $this->assertEquals('w00t', $user->getUsername());
         $this->assertEquals('cool', $user->getInheritedProperty());
@@ -70,7 +70,7 @@ class PersistingTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user2 = $this->dm->find('Documents\User', $user->getId());
+        $user2 = $this->dm->find(User::class, $user->getId());
         $this->assertNotNull($user2);
         $this->assertEquals('jon', $user2->getUsername());
     }

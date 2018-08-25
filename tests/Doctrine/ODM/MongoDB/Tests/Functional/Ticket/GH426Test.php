@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH426Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH426Test extends BaseTest
 {
     public function testTest()
     {
@@ -16,13 +19,13 @@ class GH426Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $form = $this->dm->find('Doctrine\ODM\MongoDB\Tests\Functional\Ticket\GH426Form', $form->id);
+        $form = $this->dm->find(GH426Form::class, $form->id);
 
         $this->assertEquals(2, $form->fields->count());
         $this->assertSame($form->fields[0], $form->firstField);
         $this->assertSame($form->fields[1], $form->lastField);
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Tests\Functional\Ticket\GH426Field', $form->firstField);
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Tests\Functional\Ticket\GH426Field', $form->lastField);
+        $this->assertInstanceOf(GH426Field::class, $form->firstField);
+        $this->assertInstanceOf(GH426Field::class, $form->lastField);
     }
 }
 
@@ -32,13 +35,13 @@ class GH426Form
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceMany(targetDocument="GH426Field", mappedBy="form", cascade={"all"}) */
-    public $fields = array();
+    /** @ODM\ReferenceMany(targetDocument=GH426Field::class, mappedBy="form", cascade={"all"}) */
+    public $fields = [];
 
-    /** @ODM\ReferenceOne(targetDocument="GH426Field", mappedBy="form", sort={"_id":1}) */
+    /** @ODM\ReferenceOne(targetDocument=GH426Field::class, mappedBy="form", sort={"_id":1}) */
     public $firstField;
 
-    /** @ODM\ReferenceOne(targetDocument="GH426Field", mappedBy="form", sort={"_id":-1}) */
+    /** @ODM\ReferenceOne(targetDocument=GH426Field::class, mappedBy="form", sort={"_id":-1}) */
     public $lastField;
 }
 

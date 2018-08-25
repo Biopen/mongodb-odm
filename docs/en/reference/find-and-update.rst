@@ -27,9 +27,9 @@ For example you can update a job and return it:
         ->findAndUpdate()
         ->field('in_progress')->equals(false)
         ->sort('priority', 'desc')
-    
+
         // Update found job
-        ->field('started')->set(new \MongoDate())
+        ->field('started')->set(new \MongoDB\BSON\UTCDateTime())
         ->field('in_progress')->set(true)
         ->getQuery()
         ->execute();
@@ -48,9 +48,9 @@ Here is an example where we return the new updated job document:
         ->returnNew()
         ->field('in_progress')->equals(false)
         ->sort('priority', 'desc')
-    
+
         // Update found job
-        ->field('started')->set(new \MongoDate())
+        ->field('started')->set(new \MongoDB\BSON\UTCDateTime())
         ->field('in_progress')->set(true)
         ->getQuery()
         ->execute();
@@ -80,5 +80,4 @@ You can read more about the find and modify functionality on the
 
     If you don't need to return the document, you can use just run a normal update which can
     affect multiple documents, as well. For multiple update to happen you need to use
-    ``->updateMany()`` method of the builder (or ``update()->multiple()`` combination that
-    was deprecated in version 1.2).
+    ``->updateMany()`` method of the builder.

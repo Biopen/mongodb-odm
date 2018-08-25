@@ -1,30 +1,21 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Persisters;
 
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\LockException;
-use Doctrine\ODM\MongoDB\Mapping\ClassMetadataInfo;
+use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
 use Doctrine\ODM\MongoDB\PersistentCollection\PersistentCollectionInterface;
 use Doctrine\ODM\MongoDB\UnitOfWork;
 use Doctrine\ODM\MongoDB\Utility\CollectionHelper;
+use function array_map;
+use function array_reverse;
+use function array_values;
+use function get_class;
+use function implode;
+use function sprintf;
 
 /**
  * The CollectionPersister is responsible for persisting collections of embedded
@@ -36,31 +27,18 @@ use Doctrine\ODM\MongoDB\Utility\CollectionHelper;
  * entire collection or delete/insert individual elements, depending on the
  * mapping strategy.
  *
- * @since       1.0
  */
 class CollectionPersister
 {
-    /**
-     * The DocumentManager instance.
-     *
-     * @var DocumentManager
-     */
+    /** @var DocumentManager */
     private $dm;
 
-    /**
-     * The PersistenceBuilder instance.
-     *
-     * @var PersistenceBuilder
-     */
+    /** @var PersistenceBuilder */
     private $pb;
 
-    /**
-     * Constructs a new CollectionPersister instance.
-     *
-     * @param DocumentManager $dm
-     * @param PersistenceBuilder $pb
-     * @param UnitOfWork $uow
-     */
+    /** @var UnitOfWork */
+    private $uow;
+
     public function __construct(DocumentManager $dm, PersistenceBuilder $pb, UnitOfWork $uow)
     {
         $this->dm = $dm;
@@ -70,11 +48,8 @@ class CollectionPersister
 
     /**
      * Deletes a PersistentCollection instance completely from a document using $unset.
-     *
-     * @param PersistentCollectionInterface $coll
-     * @param array $options
      */
-    public function delete(PersistentCollectionInterface $coll, array $options)
+    public function delete(PersistentCollectionInterface $coll, array $options): void
     {
         $mapping = $coll->getMapping();
         if ($mapping['isInverseSide']) {
@@ -84,18 +59,15 @@ class CollectionPersister
             throw new \UnexpectedValueException($mapping['strategy'] . ' delete collection strategy should have been handled by DocumentPersister. Please report a bug in issue tracker');
         }
         list($propertyPath, $parent) = $this->getPathAndParent($coll);
-        $query = array('$unset' => array($propertyPath => true));
+        $query = ['$unset' => [$propertyPath => true]];
         $this->executeQuery($parent, $query, $options);
     }
 
     /**
      * Updates a PersistentCollection instance deleting removed rows and
      * inserting new rows.
-     *
-     * @param PersistentCollectionInterface $coll
-     * @param array $options
      */
-    public function update(PersistentCollectionInterface $coll, array $options)
+    public function update(PersistentCollectionInterface $coll, array $options): void
     {
         $mapping = $coll->getMapping();
 
@@ -104,17 +76,17 @@ class CollectionPersister
         }
 
         switch ($mapping['strategy']) {
-            case ClassMetadataInfo::STORAGE_STRATEGY_ATOMIC_SET:
-            case ClassMetadataInfo::STORAGE_STRATEGY_ATOMIC_SET_ARRAY:
+            case ClassMetadata::STORAGE_STRATEGY_ATOMIC_SET:
+            case ClassMetadata::STORAGE_STRATEGY_ATOMIC_SET_ARRAY:
                 throw new \UnexpectedValueException($mapping['strategy'] . ' update collection strategy should have been handled by DocumentPersister. Please report a bug in issue tracker');
 
-            case ClassMetadataInfo::STORAGE_STRATEGY_SET:
-            case ClassMetadataInfo::STORAGE_STRATEGY_SET_ARRAY:
+            case ClassMetadata::STORAGE_STRATEGY_SET:
+            case ClassMetadata::STORAGE_STRATEGY_SET_ARRAY:
                 $this->setCollection($coll, $options);
                 break;
 
-            case ClassMetadataInfo::STORAGE_STRATEGY_ADD_TO_SET:
-            case ClassMetadataInfo::STORAGE_STRATEGY_PUSH_ALL:
+            case ClassMetadata::STORAGE_STRATEGY_ADD_TO_SET:
+            case ClassMetadata::STORAGE_STRATEGY_PUSH_ALL:
                 $coll->initialize();
                 $this->deleteElements($coll, $options);
                 $this->insertElements($coll, $options);
@@ -132,17 +104,14 @@ class CollectionPersister
      * strategies. The "setArray" strategy will ensure that the collection is
      * set as a BSON array, which means the collection elements will be
      * reindexed numerically before storage.
-     *
-     * @param PersistentCollectionInterface $coll
-     * @param array $options
      */
-    private function setCollection(PersistentCollectionInterface $coll, array $options)
+    private function setCollection(PersistentCollectionInterface $coll, array $options): void
     {
         list($propertyPath, $parent) = $this->getPathAndParent($coll);
         $coll->initialize();
         $mapping = $coll->getMapping();
         $setData = $this->pb->prepareAssociatedCollectionValue($coll, CollectionHelper::usesSet($mapping['strategy']));
-        $query = array('$set' => array($propertyPath => $setData));
+        $query = ['$set' => [$propertyPath => $setData]];
         $this->executeQuery($parent, $query, $options);
     }
 
@@ -151,11 +120,8 @@ class CollectionPersister
      *
      * This method is intended to be used with the "pushAll" and "addToSet"
      * strategies.
-     *
-     * @param PersistentCollectionInterface $coll
-     * @param array $options
      */
-    private function deleteElements(PersistentCollectionInterface $coll, array $options)
+    private function deleteElements(PersistentCollectionInterface $coll, array $options): void
     {
         $deleteDiff = $coll->getDeleteDiff();
 
@@ -165,7 +131,7 @@ class CollectionPersister
 
         list($propertyPath, $parent) = $this->getPathAndParent($coll);
 
-        $query = array('$unset' => array());
+        $query = ['$unset' => []];
 
         foreach ($deleteDiff as $key => $document) {
             $query['$unset'][$propertyPath . '.' . $key] = true;
@@ -179,7 +145,7 @@ class CollectionPersister
          * in the element being left in the array as null so we have to pull
          * null values.
          */
-        $this->executeQuery($parent, array('$pull' => array($propertyPath => null)), $options);
+        $this->executeQuery($parent, ['$pull' => [$propertyPath => null]], $options);
     }
 
     /**
@@ -187,11 +153,8 @@ class CollectionPersister
      *
      * This method is intended to be used with the "pushAll" and "addToSet"
      * strategies.
-     *
-     * @param PersistentCollectionInterface $coll
-     * @param array $options
      */
-    private function insertElements(PersistentCollectionInterface $coll, array $options)
+    private function insertElements(PersistentCollectionInterface $coll, array $options): void
     {
         $insertDiff = $coll->getInsertDiff();
 
@@ -200,21 +163,33 @@ class CollectionPersister
         }
 
         $mapping = $coll->getMapping();
+
+        switch ($mapping['strategy']) {
+            case ClassMetadata::STORAGE_STRATEGY_PUSH_ALL:
+                $operator = 'push';
+                break;
+
+            case ClassMetadata::STORAGE_STRATEGY_ADD_TO_SET:
+                $operator = 'addToSet';
+                break;
+
+            default:
+                throw new \LogicException(sprintf('Invalid strategy %s given for insertElements', $mapping['strategy']));
+        }
+
         list($propertyPath, $parent) = $this->getPathAndParent($coll);
 
-        $pb = $this->pb;
-
         $callback = isset($mapping['embedded'])
-            ? function($v) use ($pb, $mapping) { return $pb->prepareEmbeddedDocumentValue($mapping, $v); }
-            : function($v) use ($pb, $mapping) { return $pb->prepareReferencedDocumentValue($mapping, $v); };
+            ? function ($v) use ($mapping) {
+                return $this->pb->prepareEmbeddedDocumentValue($mapping, $v);
+            }
+            : function ($v) use ($mapping) {
+                return $this->pb->prepareReferencedDocumentValue($mapping, $v);
+            };
 
         $value = array_values(array_map($callback, $insertDiff));
 
-        if ($mapping['strategy'] === ClassMetadataInfo::STORAGE_STRATEGY_ADD_TO_SET) {
-            $value = array('$each' => $value);
-        }
-
-        $query = array('$' . $mapping['strategy'] => array($propertyPath => $value));
+        $query = ['$' . $operator => [$propertyPath => ['$each' => $value]]];
 
         $this->executeQuery($parent, $query, $options);
     }
@@ -229,16 +204,13 @@ class CollectionPersister
      *     <code>
      *     list($path, $parent) = $this->getPathAndParent($coll)
      *     </code>
-     *
-     * @param PersistentCollectionInterface $coll
-     * @return array $pathAndParent
      */
-    private function getPathAndParent(PersistentCollectionInterface $coll)
+    private function getPathAndParent(PersistentCollectionInterface $coll): array
     {
         $mapping = $coll->getMapping();
-        $fields = array();
+        $fields = [];
         $parent = $coll->getOwner();
-        while (null !== ($association = $this->uow->getParentAssociation($parent))) {
+        while (($association = $this->uow->getParentAssociation($parent)) !== null) {
             list($m, $owner, $field) = $association;
             if (isset($m['reference'])) {
                 break;
@@ -251,28 +223,24 @@ class CollectionPersister
         if ($propertyPath) {
             $path = $propertyPath . '.' . $path;
         }
-        return array($path, $parent);
+        return [$path, $parent];
     }
 
     /**
      * Executes a query updating the given document.
-     *
-     * @param object $document
-     * @param array $newObj
-     * @param array $options
      */
-    private function executeQuery($document, array $newObj, array $options)
+    private function executeQuery(object $document, array $newObj, array $options): void
     {
         $className = get_class($document);
         $class = $this->dm->getClassMetadata($className);
         $id = $class->getDatabaseIdentifierValue($this->uow->getDocumentIdentifier($document));
-        $query = array('_id' => $id);
+        $query = ['_id' => $id];
         if ($class->isVersioned) {
             $query[$class->fieldMappings[$class->versionField]['name']] = $class->reflFields[$class->versionField]->getValue($document);
         }
         $collection = $this->dm->getDocumentCollection($className);
-        $result = $collection->update($query, $newObj, $options);
-        if ($class->isVersioned && ! $result['n']) {
+        $result = $collection->updateOne($query, $newObj, $options);
+        if ($class->isVersioned && ! $result->getMatchedCount()) {
             throw LockException::lockFailed($document);
         }
     }

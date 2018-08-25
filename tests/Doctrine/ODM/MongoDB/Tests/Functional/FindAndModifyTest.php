@@ -1,20 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\User;
 
-class FindAndModifyTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class FindAndModifyTest extends BaseTest
 {
     public function testFindAndModify()
     {
-        $coll = $this->dm->getDocumentCollection('Documents\User');
-        $docs = array(array('count' => 0), array('count' => 0));
-        $coll->batchInsert($docs);
+        $coll = $this->dm->getDocumentCollection(User::class);
+        $docs = [['count' => 0], ['count' => 0]];
+        $coll->insertMany($docs);
 
         // test update findAndModify
         $q = $this->dm->createQueryBuilder()
-            ->findAndUpdate('Documents\User')
+            ->findAndUpdate(User::class)
             ->returnNew(true)
             ->field('count')->inc(5)
             ->field('username')->set('jwage')
@@ -27,7 +30,7 @@ class FindAndModifyTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         // Test remove findAndModify
         $q = $this->dm->createQueryBuilder()
-            ->findAndRemove('Documents\User')
+            ->findAndRemove(User::class)
             ->field('username')->equals('jwage')
             ->getQuery();
         $result = $q->execute();
@@ -36,7 +39,7 @@ class FindAndModifyTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertEquals('jwage', $result->getUsername());
 
         // Test the object was removed
-        $this->assertEquals(1, $this->dm->getDocumentCollection('Documents\User')->find()->count());
+        $this->assertEquals(1, $this->dm->getDocumentCollection(User::class)->count());
     }
 
     public function testFindAndModifyAlt()
@@ -49,7 +52,7 @@ class FindAndModifyTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         // test update findAndModify
         $q = $this->dm->createQueryBuilder()
-            ->findAndUpdate('Documents\User')
+            ->findAndUpdate(User::class)
             ->returnNew(true)
             ->field('username')->equals('jwage')
             ->field('username')->set('Romain Neutron')

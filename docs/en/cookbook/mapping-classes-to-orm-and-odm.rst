@@ -18,7 +18,7 @@ for multiple Doctrine persistence layers:
     <?php
 
     namespace Doctrine\Blog;
-    
+
     class BlogPost
     {
         private $id;
@@ -77,19 +77,6 @@ First define the mapping for the ORM:
             </entity>
         </doctrine-mapping>
 
-    .. code-block:: yaml
-
-        Documents\BlogPost:
-          repositoryClass: Doctrine\Blog\ORM\BlogPostRepository
-          id:
-            id:
-              type: integer
-          fields:
-            title:
-              type: string
-            body:
-              type: text
-
 Now you are able to persist the ``Documents\BlogPost`` with an instance of ``EntityManager``:
 
 .. code-block:: php
@@ -108,7 +95,7 @@ You can find the blog post:
 
     <?php
 
-    $blogPost = $em->getRepository('Documents\BlogPost')->findOneByTitle('test');
+    $blogPost = $em->getRepository('Documents\BlogPost')->findOneBy(array('title' => 'test'));
 
 MongoDB ODM
 ~~~~~~~~~~~
@@ -153,18 +140,6 @@ Now map the same class to the Doctrine MongoDB ODM:
             </document>
         </doctrine-mongo-mapping>
 
-    .. code-block:: yaml
-
-        Documents\BlogPost:
-          repositoryClass: Doctrine\Blog\ODM\MongoDB\BlogPostRepository
-          fields:
-            id:
-              type: id
-            title:
-              type: string
-            body:
-              type: text
-
 Now the same class is able to be persisted in the same way using an instance of ``DocumentManager``:
 
 .. code-block:: php
@@ -183,7 +158,7 @@ You can find the blog post:
 
     <?php
 
-    $blogPost = $dm->getRepository('Documents\BlogPost')->findOneByTitle('test');
+    $blogPost = $dm->getRepository('Documents\BlogPost')->findOneBy(array('title' => 'test'));
 
 Repository Classes
 ------------------
@@ -196,11 +171,12 @@ You can implement the same repository interface for the ORM and MongoDB ODM easi
 
     namespace Doctrine\Blog\ORM;
 
+    use Doctrine\Blog\BlogPost;
     use Doctrine\ORM\EntityRepository;
 
     class BlogPostRepository extends EntityRepository
     {
-        public function findPostById($id)
+        public function findPostById(int $id): ?BlogPost
         {
             return $this->findOneBy(array('id' => $id));
         }
@@ -214,11 +190,12 @@ Now define the same repository methods for the MongoDB ODM:
 
     namespace Doctrine\Blog\ODM\MongoDB;
 
+    use Documents\BlogPost;
     use Doctrine\ODM\MongoDB\DocumentRepository;
 
     class BlogPostRepository extends DocumentRepository
     {
-        public function findPostById($id)
+        public function findPostById(string $id): ?BlogPost
         {
             return $this->findOneBy(array('id' => $id));
         }

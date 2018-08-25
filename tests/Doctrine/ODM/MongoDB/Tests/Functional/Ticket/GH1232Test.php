@@ -1,14 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ODM\MongoDB\DocumentRepository;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Repository\DocumentRepository;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH1232Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH1232Test extends BaseTest
 {
-    public function testRemoveCausesErrors()
+    /**
+     * @doesNotPerformAssertions
+     */
+    public function testRemoveDoesNotCauseErrors()
     {
         $post = new GH1232Post();
         $this->dm->persist($post);
@@ -29,20 +35,19 @@ class GH1232Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 /** @ODM\Document */
 class GH1232Post
 {
-    const CLASSNAME = __CLASS__;
+    public const CLASSNAME = __CLASS__;
 
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceMany(targetDocument="GH1232Comment", mappedBy="post", cascade={"remove"}) */
+    /** @ODM\ReferenceMany(targetDocument=GH1232Comment::class, mappedBy="post", cascade={"remove"}) */
     protected $comments;
 
     /**
      * @ODM\ReferenceMany(
-     *     targetDocument="GH1232Comment",
+     *     targetDocument=GH1232Comment::class,
      *     mappedBy="post",
      *     repositoryMethod="getLongComments",
-     *     sort={"_id"="asc"}
      * )
      */
     protected $longComments;
@@ -59,7 +64,7 @@ class GH1232Comment
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceOne(targetDocument="GH1232Post") */
+    /** @ODM\ReferenceOne(targetDocument=GH1232Post::class) */
     public $post;
 }
 
@@ -71,6 +76,7 @@ class GH1232CommentRepository extends DocumentRepository
             ->createQueryBuilder()
             ->field('post')
             ->references($post)
+            ->sort('_id', 'asc')
             ->getQuery()
             ->execute();
     }

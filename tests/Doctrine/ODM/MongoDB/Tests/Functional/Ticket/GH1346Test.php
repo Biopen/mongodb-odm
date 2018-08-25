@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH1346Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH1346Test extends BaseTest
 {
     /**
      * @group GH1346Test
@@ -23,8 +26,8 @@ class GH1346Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $gH1346Document = $this->dm->getRepository(__NAMESPACE__ . '\GH1346Document')->find($gH1346Document->getId());
-        $referenced2 = $this->dm->getRepository(__NAMESPACE__ . '\GH1346ReferencedDocument')->find($referenced2->getId());
+        $gH1346Document = $this->dm->getRepository(GH1346Document::class)->find($gH1346Document->getId());
+        $referenced2 = $this->dm->getRepository(GH1346ReferencedDocument::class)->find($referenced2->getId());
 
         $gH1346Document->addReference($referenced2);
 
@@ -46,7 +49,7 @@ class GH1346Document
     /** @ODM\Id */
     protected $id;
 
-    /** @ODM\ReferenceMany(targetDocument="GH1346ReferencedDocument") */
+    /** @ODM\ReferenceMany(targetDocument=GH1346ReferencedDocument::class) */
     protected $references;
 
     public function __construct()

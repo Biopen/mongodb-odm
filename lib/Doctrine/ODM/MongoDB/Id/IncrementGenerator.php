@@ -1,25 +1,12 @@
 <?php
-/*
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * This software consists of voluntary contributions made by many individuals
- * and is licensed under the MIT license. For more information, see
- * <http://www.doctrine-project.org>.
- */
+
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Id;
 
 use Doctrine\ODM\MongoDB\DocumentManager;
+use MongoDB\Operation\FindOneAndUpdate;
+use function get_class;
 
 /**
  * IncrementGenerator is responsible for generating auto increment identifiers. It uses
@@ -32,42 +19,70 @@ use Doctrine\ODM\MongoDB\DocumentManager;
  * collection. If not specified it defaults to the name of the collection for the
  * document.
  *
- * @since       1.0
  */
 class IncrementGenerator extends AbstractIdGenerator
 {
+    /** @var string|null */
     protected $collection = null;
+
+    /** @var string|null */
     protected $key = null;
 
+    /** @var int */
+    protected $startingId = 1;
+
+    /**
+     * @param string $collection
+     */
     public function setCollection($collection)
     {
         $this->collection = $collection;
     }
 
-    public function setKey($key)
+    public function setKey(string $key): void
     {
         $this->key = $key;
     }
 
+    public function setStartingId(int $startingId): void
+    {
+        $this->startingId = $startingId;
+    }
+
     /** @inheritDoc */
-    public function generate(DocumentManager $dm, $document)
+    public function generate(DocumentManager $dm, object $document)
     {
         $className = get_class($document);
         $db = $dm->getDocumentDatabase($className);
 
-        $coll = $this->collection ?: 'doctrine_increment_ids';
-        $key = $this->key ?: $dm->getDocumentCollection($className)->getName();
+        $key = $this->key ?: $dm->getDocumentCollection($className)->getCollectionName();
+        $collectionName = $this->collection ?: 'doctrine_increment_ids';
+        $collection = $db->selectCollection($collectionName);
 
-        $query = array('_id' => $key);
-        $newObj = array('$inc' => array('current_id' => 1));
+        /*
+         * Unable to use '$inc' and '$setOnInsert' together due to known bug.
+         * @see https://jira.mongodb.org/browse/SERVER-10711
+         * Results in error: Cannot update 'current_id' and 'current_id' at the same time
+         */
+        $query = ['_id' => $key, 'current_id' => ['$exists' => true]];
+        $update = ['$inc' => ['current_id' => 1]];
+        $options = ['upsert' => false, 'returnDocument' => FindOneAndUpdate::RETURN_DOCUMENT_AFTER];
+        $result = $collection->findOneAndUpdate($query, $update, $options);
 
-        $command = array();
-        $command['findandmodify'] = $coll;
-        $command['query'] = $query;
-        $command['update'] = $newObj;
-        $command['upsert'] = true;
-        $command['new'] = true;
-        $result = $db->command($command);
-        return $result['value']['current_id'];
+        /*
+         * Updated nothing - counter doesn't exist, creating new counter.
+         * Not bothering with {$exists: false} in the criteria as that won't avoid
+         * an exception during a possible race condition.
+         */
+        if ($result === null) {
+            $query = ['_id' => $key];
+            $update = ['$inc' => ['current_id' => $this->startingId]];
+            $options = ['upsert' => true, 'returnDocument' => FindOneAndUpdate::RETURN_DOCUMENT_AFTER];
+            $collection->findOneAndUpdate($query, $update, $options);
+
+            return $this->startingId;
+        }
+
+        return $result['current_id'];
     }
 }

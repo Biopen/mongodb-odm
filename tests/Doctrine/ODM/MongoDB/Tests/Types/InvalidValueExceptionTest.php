@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Types;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Types\Type;
+use PHPUnit\Framework\TestCase;
 
-class InvalidValueExceptionTest extends \PHPUnit_Framework_TestCase
+class InvalidValueExceptionTest extends TestCase
 {
     /**
      * @expectedException \Doctrine\ODM\MongoDB\MongoDBException

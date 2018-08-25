@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\Bars\Bar;
 use Documents\Bars\Location;
 
-class SimpleTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class SimpleTest extends BaseTest
 {
     public function testSimple()
     {
@@ -17,14 +20,14 @@ class SimpleTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $bar = $this->dm->find('Documents\Bars\Bar', $bar->getId());
+        $bar = $this->dm->find(Bar::class, $bar->getId());
 
         $locations = $bar->getLocations();
         unset($locations[0]);
 
         $this->dm->flush();
 
-        $test = $this->dm->getDocumentCollection('Documents\Bars\Bar')->findOne();
-        $this->assertEquals(2, count($test['locations']));
+        $test = $this->dm->getDocumentCollection(Bar::class)->findOne();
+        $this->assertCount(2, $test['locations']);
     }
 }

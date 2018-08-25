@@ -1,19 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Event\PreLoadEventArgs;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use MongoDB\BSON\ObjectId;
+use function explode;
 
-class MODM43Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class MODM43Test extends BaseTest
 {
     public function testTest()
     {
-        $person = array(
-            'name' => 'Jonathan Wage'
-        );
-        $this->dm->getDocumentCollection(__NAMESPACE__.'\Person')->insert($person);
-        $user = $this->dm->find(__NAMESPACE__.'\Person', $person['_id']);
+        $person = [
+            '_id' => new ObjectId(),
+            'name' => 'Jonathan Wage',
+        ];
+        $this->dm->getDocumentCollection(Person::class)->insertOne($person);
+        $user = $this->dm->find(Person::class, $person['_id']);
         $this->assertEquals('Jonathan', $user->firstName);
         $this->assertEquals('Wage', $user->lastName);
     }
@@ -35,10 +41,12 @@ class Person
     public function preLoad(PreLoadEventArgs $e)
     {
         $data =& $e->getData();
-        if (isset($data['name'])) {
-            $e = explode(' ', $data['name']);
-            $data['firstName'] = $e[0];
-            $data['lastName'] = $e[1];
+        if (! isset($data['name'])) {
+            return;
         }
+
+        $e = explode(' ', $data['name']);
+        $data['firstName'] = $e[0];
+        $data['lastName'] = $e[1];
     }
 }

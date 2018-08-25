@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -13,7 +15,7 @@ class Tag
     /** @ODM\Field(type="string") */
     public $name;
 
-    /** @ODM\ReferenceMany(targetDocument="BlogPost", mappedBy="tags") */
+    /** @ODM\ReferenceMany(targetDocument=BlogPost::class, mappedBy="tags") */
     public $blogPosts;
 
     public function __construct($name)

@@ -1,18 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class MODM29Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class MODM29Test extends BaseTest
 {
     public function testTest()
     {
-        $collection = new \Doctrine\Common\Collections\ArrayCollection(array(
+        $collection = new ArrayCollection([
             new MODM29Embedded('0'),
             new MODM29Embedded('1'),
-            new MODM29Embedded('2')
-        ));
+            new MODM29Embedded('2'),
+        ]);
 
         // TEST CASE:
         $doc = new MODM29Doc($collection);
@@ -21,11 +25,11 @@ class MODM29Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
 
         // place element '0' after '1'
-        $collection = new \Doctrine\Common\Collections\ArrayCollection(array(
+        $collection = new ArrayCollection([
             $collection[1],
             $collection[0],
-            $collection[2]
-        ));
+            $collection[2],
+        ]);
 
         $doc->set($collection);
 
@@ -37,11 +41,11 @@ class MODM29Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $this->dm->refresh($doc);
 
-        $array = array();
-        foreach($doc->get() as $value) {
+        $array = [];
+        foreach ($doc->get() as $value) {
             $array[] = $value->get();
         }
-        $this->assertEquals(array('1', 'tmp', '2'), $array);
+        $this->assertEquals(['1', 'tmp', '2'], $array);
     }
 }
 
@@ -51,13 +55,23 @@ class MODM29Doc
     /** @ODM\Id */
     protected $id;
 
-    /** @ODM\EmbedMany(targetDocument="MODM29Embedded", strategy="set") */
+    /** @ODM\EmbedMany(targetDocument=MODM29Embedded::class, strategy="set") */
     protected $collection;
 
-    function __construct($c) {$this->set($c);}
+    public function __construct($c)
+    {
+        $this->set($c);
+    }
 
-    function set($c) {$this->collection = $c;}
-    function get() {return $this->collection;}
+    public function set($c)
+    {
+        $this->collection = $c;
+    }
+
+    public function get()
+    {
+        return $this->collection;
+    }
 }
 
 /** @ODM\EmbeddedDocument */
@@ -66,7 +80,18 @@ class MODM29Embedded
     /** @ODM\Field(type="string") */
     protected $val;
 
-    function __construct($val) {$this->set($val);}
-    function get() {return $this->val;}
-    function set($val) {$this->val = $val;}
+    public function __construct($val)
+    {
+        $this->set($val);
+    }
+
+    public function get()
+    {
+        return $this->val;
+    }
+
+    public function set($val)
+    {
+        $this->val = $val;
+    }
 }

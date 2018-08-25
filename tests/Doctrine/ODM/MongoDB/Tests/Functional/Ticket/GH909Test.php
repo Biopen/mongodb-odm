@@ -1,12 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
-use Documents\Phonenumber;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\Group;
+use Documents\Phonenumber;
 use Documents\User;
 
-class GH909Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH909Test extends BaseTest
 {
     public function testManyReferenceAddAndPersist()
     {
@@ -18,15 +21,15 @@ class GH909Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->find('Documents\User', $user->getId());
+        $user = $this->dm->find(User::class, $user->getId());
 
         $groups = $user->getGroups();
         $this->assertCount(2, $groups);
-        $this->assertFalse($groups->isInitialized());
+        $this->assertTrue($groups->isInitialized());
 
         $user->addGroup(new Group('Group C'));
         $this->assertCount(3, $groups);
-        $this->assertFalse($groups->isInitialized());
+        $this->assertTrue($groups->isInitialized());
 
         $this->dm->persist($user);
         $this->dm->flush();
@@ -56,15 +59,15 @@ class GH909Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $user = $this->dm->find('Documents\User', $user->getId());
+        $user = $this->dm->find(User::class, $user->getId());
 
         $phoneNumbers = $user->getPhoneNumbers();
         $this->assertCount(2, $phoneNumbers);
-        $this->assertFalse($phoneNumbers->isInitialized());
+        $this->assertTrue($phoneNumbers->isInitialized());
 
         $user->addPhoneNumber(new Phonenumber('333-333-3333'));
         $this->assertCount(3, $phoneNumbers);
-        $this->assertFalse($phoneNumbers->isInitialized());
+        $this->assertTrue($phoneNumbers->isInitialized());
 
         $this->dm->persist($user);
         $this->dm->flush();

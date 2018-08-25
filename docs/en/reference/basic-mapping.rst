@@ -13,14 +13,13 @@ document mapping metadata:
 
 -  Docblock Annotations
 -  XML
--  YAML
 -  Raw PHP Code
 
 .. note::
 
     If you're wondering which mapping driver gives the best
     performance, the answer is: None. Once the metadata of a class has
-    been read from the source (annotations, xml or yaml) it is stored
+    been read from the source (annotations or xml) it is stored
     in an instance of the
     ``Doctrine\ODM\MongoDB\Mapping\ClassMetadata`` class and these
     instances are stored in the metadata cache. Therefore at the end of
@@ -54,9 +53,9 @@ for supplying object document mapping metadata.
 .. note::
 
     If you're not comfortable with the concept of docblock
-    annotations, don't worry, as mentioned earlier Doctrine 2 provides
-    XML and YAML alternatives and you could easily implement your own
-    favorite mechanism for defining ORM metadata.
+    annotations, don't worry, as mentioned earlier Doctrine provides
+    XML alternative and you could easily implement your own
+    favorite mechanism for defining ODM metadata.
 
 Persistent classes
 ------------------
@@ -89,11 +88,6 @@ to be designated as a document. This can be done through the
             </document>
         </doctrine-mongo-mapping>
 
-    .. code-block:: yaml
-
-        Documents\User:
-          type: document
-
 By default, the document will be persisted to a database named
 doctrine and a collection with the same name as the class name. In
 order to change that, you can use the ``db`` and ``collection``
@@ -122,13 +116,6 @@ option as follows:
             <document name="Documents\User" db="my_db" collection="users">
             </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        Documents\User:
-          type: document
-          db: my_db
-          collection: users
 
 Now instances of ``Documents\User`` will be persisted into a
 collection named ``users`` in the database ``my_db``.
@@ -179,32 +166,32 @@ You can read more about the available MongoDB types on `php.net <http://us.php.n
 
     The Doctrine mapping types are used to convert the local PHP types to the MongoDB types
     when persisting so that your domain is not bound to MongoDB-specific types. For example a
-    DateTime instance may be converted to MongoDate when you persist your documents, and vice
-    versa during hydration.
+    DateTime instance may be converted to ``MongoDB\BSON\UTCDateTime`` when you persist your
+    documents, and vice versa during hydration.
 
 Generally, the name of each built-in mapping type hints as to how the value will be converted.
 This list explains some of the less obvious mapping types:
 
--  ``bin``: string to MongoBinData instance with a "generic" type (default)
--  ``bin_bytearray``: string to MongoBinData instance with a "byte array" type
--  ``bin_custom``: string to MongoBinData instance with a "custom" type
--  ``bin_func``: string to MongoBinData instance with a "function" type
--  ``bin_md5``: string to MongoBinData instance with a "md5" type
--  ``bin_uuid``: string to MongoBinData instance with a "uuid" type
+-  ``bin``: string to MongoDB\BSON\Binary instance with a "generic" type (default)
+-  ``bin_bytearray``: string to MongoDB\BSON\Binary instance with a "byte array" type
+-  ``bin_custom``: string to MongoDB\BSON\Binary instance with a "custom" type
+-  ``bin_func``: string to MongoDB\BSON\Binary instance with a "function" type
+-  ``bin_md5``: string to MongoDB\BSON\Binary instance with a "md5" type
+-  ``bin_uuid``: string to MongoDB\BSON\Binary instance with a "uuid" type
 -  ``collection``: numerically indexed array to MongoDB array
--  ``date``: DateTime to MongoDate
+-  ``date``: DateTime to ``MongoDB\BSON\UTCDateTime``
 -  ``hash``: associative array to MongoDB object
--  ``id``: string to MongoId by default, but other formats are possible
--  ``timestamp``: string to MongoTimestamp
+-  ``id``: string to ObjectId by default, but other formats are possible
+-  ``timestamp``: string to ``MongoDB\BSON\Timestamp``
 -  ``raw``: any type
 
 .. note::
-    
-    If you are using the hash type, values within the associative array are 
+
+    If you are using the hash type, values within the associative array are
     passed to MongoDB directly, without being prepared. Only formats suitable for
-    the Mongo driver should be used. If your hash contains values which are not 
+    the Mongo driver should be used. If your hash contains values which are not
     suitable you should either use an embedded document or use formats provided
-    by the MongoDB driver (e.g. ``\MongoDate`` instead of ``\DateTime``).
+    by the MongoDB driver (e.g. ``\MongoDB\BSON\UTCDateTime`` instead of ``\DateTime``).
 
 Property Mapping
 ----------------
@@ -247,22 +234,14 @@ Here is an example:
                         xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
                         http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
           <document name="Documents\User">
-                <field fieldName="id" id="true" />
+            <id />
           </document>
         </doctrine-mongo-mapping>
 
-    .. code-block:: yaml
+You can configure custom ID strategies if you don't want to use the default
+object ID. The available strategies are:
 
-        Documents\User:
-          fields:
-            id:
-              type: id
-              id: true
-
-You can configure custom ID strategies if you don't want to use the default MongoId.
-The available strategies are:
-
-- ``AUTO`` - Uses the native generated MongoId.
+- ``AUTO`` - Uses the native generated ObjectId.
 - ``ALNUM`` - Generates an alpha-numeric string (based on an incrementing value).
 - ``CUSTOM`` - Defers generation to a AbstractIdGenerator implementation specified in the ``class`` option.
 - ``INCREMENT`` - Uses another collection to auto increment an integer identifier.
@@ -282,7 +261,7 @@ Here is an example how to manually set a string identifier for your documents:
         {
             /** @Id(strategy="NONE", type="string") */
             private $id;
-    
+
             public function setId($id)
             {
                 $this->id = $id;
@@ -292,25 +271,16 @@ Here is an example how to manually set a string identifier for your documents:
         }
 
     .. code-block:: xml
-    
+
         <doctrine-mongo-mapping xmlns="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping"
                                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                                 xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
                                                     http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
-    
+
             <document name="MyPersistentClass">
-                <field name="id" id="true" strategy="NONE" type="string" />
+                <id strategy="NONE" type="string" />
             </document>
         </doctrine-mongo-mapping>
-    
-    .. code-block:: yaml
-
-        MyPersistentClass:
-          fields:
-            id:
-              type: string
-              id: true
-              strategy: NONE
 
 When using the ``NONE`` strategy you will have to explicitly set an id before persisting the document:
 
@@ -351,7 +321,7 @@ as an option for the ``CUSTOM`` strategy:
             /** @Id(strategy="CUSTOM", type="string", options={"class"="Vendor\Specific\Generator"}) */
             private $id;
 
-            public function setId($id)
+            public function setId(string $id)
             {
                 $this->id = $id;
             }
@@ -367,24 +337,11 @@ as an option for the ``CUSTOM`` strategy:
                                                     http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
 
             <document name="MyPersistentClass">
-                <field name="id" id="true" strategy="CUSTOM" type="string">
-                    <id-generator-option name="class" value="Vendor\Specific\Generator" />
-                </field>
+                <id strategy="CUSTOM" type="string">
+                    <generator-option name="class" value="Vendor\Specific\Generator" />
+                </id>
             </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        MyPersistentClass:
-          fields:
-            id:
-              id: true
-              strategy: CUSTOM
-              type: string
-              options:
-                class: Vendor\Specific\Generator
-
-
 
 Fields
 ~~~~~~
@@ -423,20 +380,10 @@ Example:
                         xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
                         http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
           <document name="Documents\User">
-                <field fieldName="id" id="true" />
+                <id />
                 <field fieldName="username" type="string" />
           </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        Documents\User:
-          fields:
-            id:
-              type: id
-              id: true
-            username:
-              type: string
 
 In that example we mapped the property ``id`` to the field ``id``
 using the mapping type ``id`` and the property ``name`` is mapped
@@ -459,11 +406,6 @@ as follows:
 
         <field fieldName="name" name="db_name" />
 
-    .. code-block:: yaml
-
-        name:
-          name: db_name
-
 Custom Mapping Types
 --------------------
 
@@ -483,39 +425,40 @@ class:
     namespace My\Project\Types;
 
     use Doctrine\ODM\MongoDB\Types\Type;
+    use MongoDB\BSON\UTCDateTime;
 
     /**
      * My custom datatype.
      */
     class MyType extends Type
     {
-        public function convertToPHPValue($value)
+        public function convertToPHPValue($value): \DateTime
         {
             // Note: this function is only called when your custom type is used
             // as an identifier. For other cases, closureToPHP() will be called.
             return new \DateTime('@' . $value->sec);
         }
 
-        public function closureToPHP()
+        public function closureToPHP(): string
         {
             // Return the string body of a PHP closure that will receive $value
             // and store the result of a conversion in a $return variable
             return '$return = new \DateTime($value);';
         }
 
-        public function convertToDatabaseValue($value)
+        public function convertToDatabaseValue($value): UTCDateTime
         {
             // This is called to convert a PHP value to its Mongo equivalent
-            return new \MongoDate($value);
+            return new UTCDateTime($value);
         }
     }
 
 Restrictions to keep in mind:
 
-- 
+-
    If the value of the field is *NULL* the method
    ``convertToDatabaseValue()`` is not called.
-- 
+-
    The ``UnitOfWork`` never passes values to the database convert
    method that did not change in the request.
 
@@ -531,13 +474,13 @@ Here is an example:
     <?php
 
     // in bootstrapping code
-    
+
     // ...
-    
+
     use Doctrine\ODM\MongoDB\Types\Type;
-    
+
     // ...
-    
+
     // Register my type
     Type::addType('mytype', 'My\Project\Types\MyType');
 
@@ -562,11 +505,6 @@ type in your mapping like this:
 
         <field fieldName="field" type="mytype" />
 
-    .. code-block:: yaml
-
-        field:
-          type: mytype
-
 Multiple Document Types in a Collection
 ---------------------------------------
 
@@ -588,7 +526,7 @@ the collection. Here is an example:
     {
         // ...
     }
-    
+
     /**
      * @Document(collection="my_documents")
      * @DiscriminatorField("type")

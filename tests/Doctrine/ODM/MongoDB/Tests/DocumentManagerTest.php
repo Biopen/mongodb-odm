@@ -1,82 +1,106 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests;
 
-use Doctrine\ODM\MongoDB\Mapping\ClassMetadataInfo;
+use Doctrine\Common\EventManager;
+use Doctrine\ODM\MongoDB\Aggregation\Builder as AggregationBuilder;
+use Doctrine\ODM\MongoDB\Configuration;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
-use Doctrine\ODM\MongoDB\Tests\Mocks\DocumentManagerMock;
+use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
+use Doctrine\ODM\MongoDB\Mapping\ClassMetadataFactory;
+use Doctrine\ODM\MongoDB\MongoDBException;
+use Doctrine\ODM\MongoDB\Proxy\ProxyFactory;
+use Doctrine\ODM\MongoDB\Query\Builder as QueryBuilder;
+use Doctrine\ODM\MongoDB\Query\FilterCollection;
+use Doctrine\ODM\MongoDB\SchemaManager;
+use Doctrine\ODM\MongoDB\UnitOfWork;
+use Documents\BaseCategory;
+use Documents\BaseCategoryRepository;
+use Documents\BlogPost;
+use Documents\Category;
+use Documents\CmsPhonenumber;
+use Documents\CmsUser;
+use Documents\CustomRepository\Document;
+use Documents\CustomRepository\Repository;
+use Documents\Tournament\ParticipantSolo;
+use Documents\User;
+use MongoDB\BSON\ObjectId;
+use MongoDB\Client;
+use function get_class;
 
-class DocumentManagerTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class DocumentManagerTest extends BaseTest
 {
     public function testCustomRepository()
     {
-        $this->assertInstanceOf('Documents\CustomRepository\Repository', $this->dm->getRepository('Documents\CustomRepository\Document'));
+        $this->assertInstanceOf(Repository::class, $this->dm->getRepository(Document::class));
     }
 
     public function testCustomRepositoryMappedsuperclass()
     {
-        $this->assertInstanceOf('Documents\BaseCategoryRepository', $this->dm->getRepository('Documents\BaseCategory'));
+        $this->assertInstanceOf(BaseCategoryRepository::class, $this->dm->getRepository(BaseCategory::class));
     }
 
     public function testCustomRepositoryMappedsuperclassChild()
     {
-        $this->assertInstanceOf('Documents\BaseCategoryRepository', $this->dm->getRepository('Documents\Category'));
+        $this->assertInstanceOf(BaseCategoryRepository::class, $this->dm->getRepository(Category::class));
     }
 
     public function testGetConnection()
     {
-        $this->assertInstanceOf('\Doctrine\MongoDB\Connection', $this->dm->getConnection());
+        $this->assertInstanceOf(Client::class, $this->dm->getClient());
     }
 
     public function testGetMetadataFactory()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\Mapping\ClassMetadataFactory', $this->dm->getMetadataFactory());
+        $this->assertInstanceOf(ClassMetadataFactory::class, $this->dm->getMetadataFactory());
     }
 
     public function testGetConfiguration()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\Configuration', $this->dm->getConfiguration());
+        $this->assertInstanceOf(Configuration::class, $this->dm->getConfiguration());
     }
 
     public function testGetUnitOfWork()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\UnitOfWork', $this->dm->getUnitOfWork());
+        $this->assertInstanceOf(UnitOfWork::class, $this->dm->getUnitOfWork());
     }
 
     public function testGetProxyFactory()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\Proxy\ProxyFactory', $this->dm->getProxyFactory());
+        $this->assertInstanceOf(ProxyFactory::class, $this->dm->getProxyFactory());
     }
 
     public function testGetEventManager()
     {
-        $this->assertInstanceOf('\Doctrine\Common\EventManager', $this->dm->getEventManager());
+        $this->assertInstanceOf(EventManager::class, $this->dm->getEventManager());
     }
 
     public function testGetSchemaManager()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\SchemaManager', $this->dm->getSchemaManager());
+        $this->assertInstanceOf(SchemaManager::class, $this->dm->getSchemaManager());
     }
 
     public function testCreateQueryBuilder()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\Query\Builder', $this->dm->createQueryBuilder());
+        $this->assertInstanceOf(QueryBuilder::class, $this->dm->createQueryBuilder());
     }
 
     public function testCreateAggregationBuilder()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\Aggregation\Builder', $this->dm->createAggregationBuilder('Documents\BlogPost'));
+        $this->assertInstanceOf(AggregationBuilder::class, $this->dm->createAggregationBuilder(BlogPost::class));
     }
 
     public function testGetFilterCollection()
     {
-        $this->assertInstanceOf('\Doctrine\ODM\MongoDB\Query\FilterCollection', $this->dm->getFilterCollection());
-    }  
-    
+        $this->assertInstanceOf(FilterCollection::class, $this->dm->getFilterCollection());
+    }
+
     public function testGetPartialReference()
     {
-        $id = new \MongoId();
-        $user = $this->dm->getPartialReference('Documents\CmsUser', $id);
+        $id = new ObjectId();
+        $user = $this->dm->getPartialReference(CmsUser::class, $id);
         $this->assertTrue($this->dm->contains($user));
         $this->assertEquals($id, $user->id);
         $this->assertNull($user->getName());
@@ -91,13 +115,13 @@ class DocumentManagerTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function dataMethodsAffectedByNoObjectArguments()
     {
-        return array(
-            array('persist'),
-            array('remove'),
-            array('merge'),
-            array('refresh'),
-            array('detach')
-        );
+        return [
+            ['persist'],
+            ['remove'],
+            ['merge'],
+            ['refresh'],
+            ['detach'],
+        ];
     }
 
     /**
@@ -112,13 +136,13 @@ class DocumentManagerTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function dataAffectedByErrorIfClosedException()
     {
-        return array(
-            array('flush'),
-            array('persist'),
-            array('remove'),
-            array('merge'),
-            array('refresh'),
-        );
+        return [
+            ['flush'],
+            ['persist'],
+            ['remove'],
+            ['merge'],
+            ['refresh'],
+        ];
     }
 
     /**
@@ -127,7 +151,8 @@ class DocumentManagerTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
      */
     public function testAffectedByErrorIfClosedException($methodName)
     {
-        $this->setExpectedException('Doctrine\ODM\MongoDB\MongoDBException', 'closed');
+        $this->expectException(MongoDBException::class);
+        $this->expectExceptionMessage('closed');
 
         $this->dm->close();
         if ($methodName === 'flush') {
@@ -137,76 +162,25 @@ class DocumentManagerTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         }
     }
 
-    public function testGetDocumentCollectionAppliesClassMetadataSlaveOkay()
-    {
-        $cm1 = new ClassMetadataInfo('a');
-        $cm1->collection = 'a';
-
-        $cm2 = new ClassMetadataInfo('b');
-        $cm2->collection = 'b';
-        $cm2->slaveOkay = true;
-
-        $cm3 = new ClassMetadataInfo('c');
-        $cm3->collection = 'c';
-        $cm3->slaveOkay = false;
-
-        $map = array(
-            array('a', $cm1),
-            array('b', $cm2),
-            array('c', $cm3),
-        );
-
-        $metadataFactory = $this->getMockClassMetadataFactory();
-        $metadataFactory->expects($this->any())
-            ->method('getMetadataFor')
-            ->will($this->returnValueMap($map));
-
-        $coll1 = $this->getMockCollection();
-        $coll1->expects($this->never())
-            ->method('setSlaveOkay');
-
-        $coll2 = $this->getMockCollection();
-        $coll2->expects($this->once())
-            ->method('setSlaveOkay')
-            ->with(true);
-
-        $coll3 = $this->getMockCollection();
-        $coll3->expects($this->once())
-            ->method('setSlaveOkay')
-            ->with(false);
-
-        $dm = new DocumentManagerMock();
-        $dm->metadataFactory = $metadataFactory;
-        $dm->documentCollections = array(
-            'a' => $coll1,
-            'b' => $coll2,
-            'c' => $coll3,
-        );
-
-        $dm->getDocumentCollection('a');
-        $dm->getDocumentCollection('b');
-        $dm->getDocumentCollection('c');
-    }
-
     /**
      * @expectedException \RuntimeException
      * @expectedExceptionMessage Cannot create a DBRef for class Documents\User without an identifier. Have you forgotten to persist/merge the document first?
      */
     public function testCannotCreateDbRefWithoutId()
     {
-        $d = new \Documents\User();
-        $this->dm->createDBRef($d);
+        $d = new User();
+        $this->dm->createReference($d, ['storeAs' => ClassMetadata::REFERENCE_STORE_AS_DB_REF]);
     }
 
     public function testCreateDbRefWithNonNullEmptyId()
     {
-        $phonenumber = new \Documents\CmsPhonenumber();
+        $phonenumber = new CmsPhonenumber();
         $phonenumber->phonenumber = 0;
         $this->dm->persist($phonenumber);
 
-        $dbRef = $this->dm->createDBRef($phonenumber);
+        $dbRef = $this->dm->createReference($phonenumber, ['storeAs' => ClassMetadata::REFERENCE_STORE_AS_DB_REF, 'targetDocument' => CmsPhonenumber::class]);
 
-        $this->assertSame(array('$ref' => 'CmsPhonenumber', '$id' => 0), $dbRef);
+        $this->assertSame(['$ref' => 'CmsPhonenumber', '$id' => 0], $dbRef);
     }
 
     /**
@@ -216,42 +190,36 @@ class DocumentManagerTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     public function testDisriminatedSimpleReferenceFails()
     {
         $d = new WrongSimpleRefDocument();
-        $r = new \Documents\Tournament\ParticipantSolo('Maciej');
+        $r = new ParticipantSolo('Maciej');
         $this->dm->persist($r);
         $class = $this->dm->getClassMetadata(get_class($d));
-        $this->dm->createDBRef($r, $class->associationMappings['ref']);
+        $this->dm->createReference($r, $class->associationMappings['ref']);
     }
 
     public function testDifferentStoreAsDbReferences()
     {
-        $r = new \Documents\User();
+        $r = new User();
         $this->dm->persist($r);
         $d = new ReferenceStoreAsDocument();
         $class = $this->dm->getClassMetadata(get_class($d));
 
-        $dbRef = $this->dm->createDBRef($r, $class->associationMappings['ref1']);
-        $this->assertInstanceOf('MongoId', $dbRef);
+        $dbRef = $this->dm->createReference($r, $class->associationMappings['ref1']);
+        $this->assertInstanceOf(ObjectId::class, $dbRef);
 
-        $dbRef = $this->dm->createDBRef($r, $class->associationMappings['ref2']);
+        $dbRef = $this->dm->createReference($r, $class->associationMappings['ref2']);
         $this->assertCount(2, $dbRef);
         $this->assertArrayHasKey('$ref', $dbRef);
         $this->assertArrayHasKey('$id', $dbRef);
 
-        $dbRef = $this->dm->createDBRef($r, $class->associationMappings['ref3']);
+        $dbRef = $this->dm->createReference($r, $class->associationMappings['ref3']);
         $this->assertCount(3, $dbRef);
         $this->assertArrayHasKey('$ref', $dbRef);
         $this->assertArrayHasKey('$id', $dbRef);
         $this->assertArrayHasKey('$db', $dbRef);
-    }
 
-    private function getMockClassMetadataFactory()
-    {
-        return $this->createMock('Doctrine\ODM\MongoDB\Mapping\ClassMetadataFactory');
-    }
-
-    private function getMockCollection()
-    {
-        return $this->createMock('Doctrine\MongoDB\Collection');
+        $dbRef = $this->dm->createReference($r, $class->associationMappings['ref4']);
+        $this->assertCount(1, $dbRef);
+        $this->assertArrayHasKey('id', $dbRef);
     }
 }
 
@@ -261,7 +229,7 @@ class WrongSimpleRefDocument
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceOne(targetDocument="Documents\Tournament\Participant", simple=true) */
+    /** @ODM\ReferenceOne(targetDocument="Documents\Tournament\Participant", storeAs="id") */
     public $ref;
 }
 
@@ -271,12 +239,15 @@ class ReferenceStoreAsDocument
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\ReferenceOne(targetDocument="Documents\User", storeAs="id") */
+    /** @ODM\ReferenceOne(targetDocument=User::class, storeAs="id") */
     public $ref1;
 
-    /** @ODM\ReferenceOne(targetDocument="Documents\User", storeAs="dbRef") */
+    /** @ODM\ReferenceOne(targetDocument=User::class, storeAs="dbRef") */
     public $ref2;
 
-    /** @ODM\ReferenceOne(targetDocument="Documents\User", storeAs="dbRefWithDb") */
+    /** @ODM\ReferenceOne(targetDocument=User::class, storeAs="dbRefWithDb") */
     public $ref3;
+
+    /** @ODM\ReferenceOne(targetDocument=User::class, storeAs="ref") */
+    public $ref4;
 }

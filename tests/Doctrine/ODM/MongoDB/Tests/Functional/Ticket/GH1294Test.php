@@ -1,15 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use MongoDB\BSON\Regex;
 
-class GH1294Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH1294Test extends BaseTest
 {
-    public function testMongoRegexSearchOnIdentifierWithUuidStrategy()
+    public function testRegexSearchOnIdentifierWithUuidStrategy()
     {
-        $userClass = __NAMESPACE__ . '\GH1294User';
-
         $user1 = new GH1294User();
         $user1->id = 'aaa111aaa';
         $user1->name = 'Steven';
@@ -23,15 +25,15 @@ class GH1294Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->flush();
         $this->dm->clear();
 
-        $qb = $this->dm->createQueryBuilder($userClass);
+        $qb = $this->dm->createQueryBuilder(GH1294User::class);
 
         $res = $qb->field('id')
-            ->equals(new \MongoRegex("/^bbb.*$/i"))
+            ->equals(new Regex('^bbb.*$', 'i'))
             ->getQueryArray();
 
-        $this->assertTrue(($res['_id'] instanceof \MongoRegex));
-        $this->assertEquals('^bbb.*$', $res['_id']->regex);
-        $this->assertEquals('i', $res['_id']->flags);
+        $this->assertInstanceOf(Regex::class, $res['_id']);
+        $this->assertEquals('^bbb.*$', $res['_id']->getPattern());
+        $this->assertEquals('i', $res['_id']->getFlags());
     }
 }
 
@@ -44,7 +46,6 @@ class GH1294User
     /** @ODM\Field(type="string") */
     public $name = false;
 
-    // Return the identifier without triggering Proxy initialization
     public function getId()
     {
         return $this->id;

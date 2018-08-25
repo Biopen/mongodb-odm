@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Query\Filter;
 
-class BsonFilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+
+class BsonFilterTest extends BaseTest
 {
     /**
      * @expectedException InvalidArgumentException
@@ -25,10 +29,5 @@ class BsonFilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $filter = new Filter($this->dm);
         $filter->setParameter('foo', null);
         $this->assertNull($filter->getParameter('foo'));
-    }
- 
-    public function testCreateMockOfFilter()
-    {
-        $this->createMock('\Doctrine\ODM\MongoDB\Query\Filter\BsonFilter');
     }
 }

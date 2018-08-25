@@ -47,26 +47,10 @@ the ``@Document`` annotation:
                           xsi:schemaLocation="http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping
                           http://doctrine-project.org/schemas/odm/doctrine-mongo-mapping.xsd">
             <document name="Documents\Category" collection="collname" capped-collection="true" capped-collection-size="100000" capped-collection-max="1000">
-                <field fieldName="id" id="true" />
+                <id />
                 <field fieldName="name" type="string" />
             </document>
         </doctrine-mongo-mapping>
-
-    .. code-block:: yaml
-
-        Documents\Category:
-          type: document
-          collection:
-            name: collname
-            capped: true
-            size: 100000
-            max: 1000
-          fields:
-            id:
-              type: id
-              id: true
-            name:
-              type: string
 
 Creating
 --------

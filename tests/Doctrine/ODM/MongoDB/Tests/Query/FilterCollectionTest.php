@@ -1,8 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Query;
 
-class FilterCollectionTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+use Doctrine\ODM\MongoDB\Query\Filter\BsonFilter;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Documents\User;
+
+class FilterCollectionTest extends BaseTest
 {
     public function testEnable()
     {
@@ -14,7 +20,7 @@ class FilterCollectionTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $enabledFilters = $filterCollection->getEnabledFilters();
         $this->assertCount(1, $enabledFilters);
-        $this->assertContainsOnly('Doctrine\ODM\MongoDB\Query\Filter\BsonFilter', $enabledFilters);
+        $this->assertContainsOnly(BsonFilter::class, $enabledFilters);
 
         $filterCollection->disable('testFilter');
         $this->assertCount(0, $filterCollection->getEnabledFilters());
@@ -55,46 +61,48 @@ class FilterCollectionTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     {
         $filterCollection = $this->dm->getFilterCollection();
         $filterCollection->enable('testFilter');
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Tests\Query\Filter\Filter', $filterCollection->getFilter('testFilter'));
+        $this->assertInstanceOf(Filter\Filter::class, $filterCollection->getFilter('testFilter'));
     }
 
     public function testGetFilterCriteria()
     {
-        $class = $this->dm->getClassMetadata('Documents\User');
+        $class = $this->dm->getClassMetadata(User::class);
         $filterCollection = $this->dm->getFilterCollection();
 
-        $this->assertSame(array(), $filterCollection->getFilterCriteria($class));
+        $this->assertEmpty($filterCollection->getFilterCriteria($class));
 
         $filterCollection->enable('testFilter');
         $testFilter = $filterCollection->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\User');
+        $testFilter->setParameter('class', User::class);
         $testFilter->setParameter('field', 'username');
         $testFilter->setParameter('value', 'Tim');
 
-        $this->assertSame(array('username' => 'Tim'), $filterCollection->getFilterCriteria($class));
+        $this->assertSame(['username' => 'Tim'], $filterCollection->getFilterCriteria($class));
     }
 
     public function testGetFilterCriteriaMergesCriteria()
     {
-        $class = $this->dm->getClassMetadata('Documents\User');
+        $class = $this->dm->getClassMetadata(User::class);
         $filterCollection = $this->dm->getFilterCollection();
 
         $filterCollection->enable('testFilter');
         $testFilter = $filterCollection->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\User');
+        $testFilter->setParameter('class', User::class);
         $testFilter->setParameter('field', 'username');
         $testFilter->setParameter('value', 'Tim');
 
         $filterCollection->enable('testFilter2');
         $testFilter = $filterCollection->getFilter('testFilter2');
-        $testFilter->setParameter('class', 'Documents\User');
+        $testFilter->setParameter('class', User::class);
         $testFilter->setParameter('field', 'username');
         $testFilter->setParameter('value', 'John');
 
-        $expectedCriteria = array('$and' => array(
-            array('username' => 'Tim'),
-            array('username' => 'John'),
-        ));
+        $expectedCriteria = [
+        '$and' => [
+            ['username' => 'Tim'],
+            ['username' => 'John'],
+        ],
+        ];
 
         $this->assertSame($expectedCriteria, $filterCollection->getFilterCriteria($class));
     }

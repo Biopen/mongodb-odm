@@ -1,23 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests;
 
-use Doctrine\Common\PropertyChangedListener;
 use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\EventManager;
+use Doctrine\Common\NotifyPropertyChanged;
+use Doctrine\Common\PropertyChangedListener;
 use Doctrine\ODM\MongoDB\DocumentManager;
-use Doctrine\ODM\MongoDB\UnitOfWork;
+use Doctrine\ODM\MongoDB\Hydrator\HydratorFactory;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
+use Doctrine\ODM\MongoDB\MongoDBException;
 use Doctrine\ODM\MongoDB\Persisters\PersistenceBuilder;
+use Doctrine\ODM\MongoDB\Proxy\Proxy;
 use Doctrine\ODM\MongoDB\Tests\Mocks\DocumentPersisterMock;
-use Documents\ForumUser;
+use Doctrine\ODM\MongoDB\Tests\Mocks\ExceptionThrowingListenerMock;
+use Doctrine\ODM\MongoDB\Tests\Mocks\PreUpdateListenerMock;
+use Doctrine\ODM\MongoDB\UnitOfWork;
+use Documents\Address;
+use Documents\CmsPhonenumber;
+use Documents\File;
+use Documents\FileWithoutMetadata;
 use Documents\ForumAvatar;
+use Documents\ForumUser;
+use Documents\Functional\NotSaved;
+use Documents\User;
+use MongoDB\BSON\ObjectId;
+use function get_class;
+use function spl_object_hash;
+use function sprintf;
+use function ucfirst;
 
-class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class UnitOfWorkTest extends BaseTest
 {
     public function testIsDocumentScheduled()
     {
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $user = new ForumUser();
         $this->assertFalse($this->uow->isDocumentScheduled($user));
         $this->uow->scheduleForInsert($class, $user);
@@ -26,7 +46,7 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testScheduleForInsert()
     {
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $user = new ForumUser();
         $this->assertFalse($this->uow->isScheduledForInsert($user));
         $this->uow->scheduleForInsert($class, $user);
@@ -35,9 +55,9 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testScheduleForUpsert()
     {
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $user = new ForumUser();
-        $user->id = new \MongoId();
+        $user->id = new ObjectId();
         $this->assertFalse($this->uow->isScheduledForInsert($user));
         $this->assertFalse($this->uow->isScheduledForUpsert($user));
         $this->uow->scheduleForUpsert($class, $user);
@@ -47,19 +67,19 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testGetScheduledDocumentUpserts()
     {
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $user = new ForumUser();
-        $user->id = new \MongoId();
+        $user->id = new ObjectId();
         $this->assertEmpty($this->uow->getScheduledDocumentUpserts());
         $this->uow->scheduleForUpsert($class, $user);
-        $this->assertEquals(array(spl_object_hash($user) => $user), $this->uow->getScheduledDocumentUpserts());
+        $this->assertEquals([spl_object_hash($user) => $user], $this->uow->getScheduledDocumentUpserts());
     }
 
     public function testScheduleForEmbeddedUpsert()
     {
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $test = new EmbeddedUpsertDocument();
-        $test->id = (string) new \MongoId();
+        $test->id = (string) new ObjectId();
         $this->assertFalse($this->uow->isScheduledForInsert($test));
         $this->assertFalse($this->uow->isScheduledForUpsert($test));
         $this->uow->persist($test);
@@ -81,7 +101,7 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testScheduleForInsertShouldNotUpsertDocumentsWithInconsistentIdValues()
     {
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $user = new ForumUser();
         $user->id = 1;
         $this->assertFalse($this->uow->isScheduledForInsert($user));
@@ -100,16 +120,13 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertFalse($this->uow->isScheduledForDelete($user));
     }
 
-
-    /* Operational tests */
-
     public function testSavingSingleDocumentWithIdentityFieldForcesInsert()
     {
         // Setup fake persister and id generator for identity generation
         $pb = $this->getMockPersistenceBuilder();
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $userPersister = $this->getMockDocumentPersister($pb, $class);
-        $this->uow->setDocumentPersister('Documents\ForumUser', $userPersister);
+        $this->uow->setDocumentPersister(ForumUser::class, $userPersister);
 
         // Test
         $user = new ForumUser();
@@ -117,9 +134,9 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->uow->persist($user);
 
         // Check
-        $this->assertEquals(0, count($userPersister->getInserts()));
-        $this->assertEquals(0, count($userPersister->getUpdates()));
-        $this->assertEquals(0, count($userPersister->getDeletes()));
+        $this->assertCount(0, $userPersister->getInserts());
+        $this->assertCount(0, $userPersister->getUpdates());
+        $this->assertCount(0, $userPersister->getDeletes());
         $this->assertTrue($this->uow->isInIdentityMap($user));
         // should no longer be scheduled for insert
         $this->assertTrue($this->uow->isScheduledForInsert($user));
@@ -131,9 +148,9 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->uow->commit();
 
         // Check.
-        $this->assertEquals(1, count($userPersister->getInserts()));
-        $this->assertEquals(0, count($userPersister->getUpdates()));
-        $this->assertEquals(0, count($userPersister->getDeletes()));
+        $this->assertCount(1, $userPersister->getInserts());
+        $this->assertCount(0, $userPersister->getUpdates());
+        $this->assertCount(0, $userPersister->getDeletes());
 
         // should have an id
         $this->assertNotNull($user->id);
@@ -148,15 +165,15 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         // Setup fake persister and id generator for identity generation
         //ForumUser
         $pb = $this->getMockPersistenceBuilder();
-        $class = $this->dm->getClassMetadata('Documents\ForumUser');
+        $class = $this->dm->getClassMetadata(ForumUser::class);
         $userPersister = $this->getMockDocumentPersister($pb, $class);
-        $this->uow->setDocumentPersister('Documents\ForumUser', $userPersister);
+        $this->uow->setDocumentPersister(ForumUser::class, $userPersister);
 
         // ForumAvatar
         $pb = $this->getMockPersistenceBuilder();
-        $class = $this->dm->getClassMetadata('Documents\ForumAvatar');
+        $class = $this->dm->getClassMetadata(ForumAvatar::class);
         $avatarPersister = $this->getMockDocumentPersister($pb, $class);
-        $this->uow->setDocumentPersister('Documents\ForumAvatar', $avatarPersister);
+        $this->uow->setDocumentPersister(ForumAvatar::class, $avatarPersister);
 
         // Test
         $user = new ForumUser();
@@ -170,24 +187,24 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertNotNull($user->id);
         $this->assertNotNull($avatar->id);
 
-        $this->assertEquals(1, count($userPersister->getInserts()));
-        $this->assertEquals(0, count($userPersister->getUpdates()));
-        $this->assertEquals(0, count($userPersister->getDeletes()));
+        $this->assertCount(1, $userPersister->getInserts());
+        $this->assertCount(0, $userPersister->getUpdates());
+        $this->assertCount(0, $userPersister->getDeletes());
 
-        $this->assertEquals(1, count($avatarPersister->getInserts()));
-        $this->assertEquals(0, count($avatarPersister->getUpdates()));
-        $this->assertEquals(0, count($avatarPersister->getDeletes()));
+        $this->assertCount(1, $avatarPersister->getInserts());
+        $this->assertCount(0, $avatarPersister->getUpdates());
+        $this->assertCount(0, $avatarPersister->getDeletes());
     }
 
     public function testChangeTrackingNotify()
     {
         $pb = $this->getMockPersistenceBuilder();
 
-        $class = $this->dm->getClassMetadata('Doctrine\ODM\MongoDB\Tests\NotifyChangedDocument');
+        $class = $this->dm->getClassMetadata(NotifyChangedDocument::class);
         $persister = $this->getMockDocumentPersister($pb, $class);
         $this->uow->setDocumentPersister($class->name, $persister);
 
-        $class = $this->dm->getClassMetadata('Doctrine\ODM\MongoDB\Tests\NotifyChangedRelatedItem');
+        $class = $this->dm->getClassMetadata(NotifyChangedRelatedItem::class);
         $itemPersister = $this->getMockDocumentPersister($pb, $class);
         $this->uow->setDocumentPersister($class->name, $itemPersister);
 
@@ -198,7 +215,7 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->uow->persist($entity);
         $this->uow->commit();
 
-        $this->assertEquals(1, count($persister->getUpserts()));
+        $this->assertCount(1, $persister->getUpserts());
         $this->assertTrue($this->uow->isInIdentityMap($entity));
         $this->assertFalse($this->uow->isScheduledForDirtyCheck($entity));
 
@@ -208,7 +225,7 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $entity->setTransient('newtransientvalue');
 
         $this->assertTrue($this->uow->isScheduledForDirtyCheck($entity));
-        $this->assertEquals(array('data' => array('thedata', 'newdata')), $this->uow->getDocumentChangeSet($entity));
+        $this->assertEquals(['data' => ['thedata', 'newdata']], $this->uow->getDocumentChangeSet($entity));
 
         $item = new NotifyChangedRelatedItem();
         $item->setId(1);
@@ -218,7 +235,7 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->uow->persist($item);
         $this->uow->commit();
 
-        $this->assertEquals(1, count($itemPersister->getUpserts()));
+        $this->assertCount(1, $itemPersister->getUpserts());
         $this->assertTrue($this->uow->isInIdentityMap($item));
         $this->assertFalse($this->uow->isScheduledForDirtyCheck($item));
 
@@ -234,45 +251,18 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $updates = $itemPersister->getUpdates();
 
-        $this->assertEquals(1, count($updates));
-        $this->assertTrue($updates[0] === $item);
-    }
-
-    public function testDoubleCommitWithChangeTrackingNotify()
-    {
-        $pb = $this->getMockPersistenceBuilder();
-
-        $class = $this->dm->getClassMetadata('Doctrine\ODM\MongoDB\Tests\NotifyChangedDocument');
-        $persister = $this->getMockDocumentPersister($pb, $class);
-        $this->uow->setDocumentPersister($class->name, $persister);
-
-        $entity = new NotifyChangedDocument();
-        $entity->setId(2);
-        $this->uow->persist($entity);
-
-        $this->uow->commit($entity);
-
-        // Use a custom error handler that will fail the test if the next commit() call raises a notice error
-        set_error_handler(function() {
-            restore_error_handler();
-
-            $this->fail('Expected not to get a notice error after committing an entity multiple times using the NOTIFY change tracking policy.');
-        }, E_NOTICE);
-
-        $this->uow->commit($entity);
-
-        // Restore previous error handler if no errors have been raised
-        restore_error_handler();
+        $this->assertCount(1, $updates);
+        $this->assertSame($updates[0], $item);
     }
 
     public function testGetDocumentStateWithAssignedIdentity()
     {
         $pb = $this->getMockPersistenceBuilder();
-        $class = $this->dm->getClassMetadata("Documents\CmsPhonenumber");
+        $class = $this->dm->getClassMetadata(CmsPhonenumber::class);
         $persister = $this->getMockDocumentPersister($pb, $class);
-        $this->uow->setDocumentPersister('Documents\CmsPhonenumber', $persister);
+        $this->uow->setDocumentPersister(CmsPhonenumber::class, $persister);
 
-        $ph = new \Documents\CmsPhonenumber();
+        $ph = new CmsPhonenumber();
         $ph->phonenumber = '12345';
 
         $this->assertEquals(UnitOfWork::STATE_NEW, $this->uow->getDocumentState($ph));
@@ -281,10 +271,10 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $persister->reset();
 
         // if the document is already managed the exists() check should be skipped
-        $this->uow->registerManaged($ph, '12345', array());
+        $this->uow->registerManaged($ph, '12345', []);
         $this->assertEquals(UnitOfWork::STATE_MANAGED, $this->uow->getDocumentState($ph));
         $this->assertFalse($persister->isExistsCalled());
-        $ph2 = new \Documents\CmsPhonenumber();
+        $ph2 = new CmsPhonenumber();
         $ph2->phonenumber = '12345';
         $this->assertEquals(UnitOfWork::STATE_DETACHED, $this->uow->getDocumentState($ph2));
         $this->assertFalse($persister->isExistsCalled());
@@ -296,9 +286,9 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     public function testThrowsOnPersistOfMappedSuperclass()
     {
         $documentManager = $this->getDocumentManager();
-        $documentManager->setClassMetadata('Documents\Address', $this->getClassMetadata('Documents\Address', 'MappedSuperclass'));
+        $documentManager->setClassMetadata(Address::class, $this->getClassMetadata(Address::class, 'MappedSuperclass'));
         $unitOfWork = $this->getUnitOfWork($documentManager);
-        $unitOfWork->persist(new \Documents\Address());
+        $unitOfWork->persist(new Address());
     }
 
     public function testParentAssociations()
@@ -310,19 +300,22 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $documentManager = $this->getDocumentManager();
         $unitOfWork = $this->getUnitOfWork($documentManager);
-        $unitOfWork->setParentAssociation($b, array('name' => 'b'), $a, 'b');
-        $unitOfWork->setParentAssociation($c, array('name' => 'c'), $b, 'b.c');
-        $unitOfWork->setParentAssociation($d, array('name' => 'd'), $c, 'b.c.d');
+        $unitOfWork->setParentAssociation($b, ['name' => 'b'], $a, 'b');
+        $unitOfWork->setParentAssociation($c, ['name' => 'c'], $b, 'b.c');
+        $unitOfWork->setParentAssociation($d, ['name' => 'd'], $c, 'b.c.d');
 
-        $this->assertEquals(array(array('name' => 'd'), $c, 'b.c.d'), $unitOfWork->getParentAssociation($d));
+        $this->assertEquals([['name' => 'd'], $c, 'b.c.d'], $unitOfWork->getParentAssociation($d));
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
     public function testPreUpdateTriggeredWithEmptyChangeset()
     {
         $this->dm->getEventManager()->addEventSubscriber(
-            new \Doctrine\ODM\MongoDB\Tests\Mocks\PreUpdateListenerMock()
+            new PreUpdateListenerMock()
         );
-        $user = new \Documents\ForumUser();
+        $user = new ForumUser();
         $user->username = '12345';
 
         $this->dm->persist($user);
@@ -335,14 +328,75 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testNotSaved()
     {
-        $test = new \Documents\Functional\NotSaved();
+        $test = new NotSaved();
         $test->name = 'test';
         $test->notSaved = 'Jon';
         $this->dm->persist($test);
 
         $this->uow->computeChangeSets();
         $changeset = $this->uow->getDocumentChangeSet($test);
-        $this->assertFalse(isset($changeset['notSaved']));
+        $this->assertArrayNotHasKey('notSaved', $changeset);
+    }
+
+    public function testNoUpdatesOnGridFSFields(): void
+    {
+        $file = new File();
+
+        $access = \Closure::bind(function (string $property, $value): void {
+            $this->$property = $value;
+        }, $file, $file);
+
+        $access('id', 1234);
+        $access('filename', 'foo');
+        $access('length', 123);
+        $access('uploadDate', new \DateTime());
+        $access('chunkSize', 1234);
+
+        $owner = new User();
+        $this->uow->persist($owner);
+
+        $file->getOrCreateMetadata()->setOwner($owner);
+
+        $data = [
+            '_id' => 123,
+            'filename' => 'file.txt',
+            'chunkSize' => 256,
+            'length' => 0,
+            'uploadDate' => new \DateTime(),
+        ];
+
+        $this->uow->registerManaged($file, spl_object_hash($file), $data);
+
+        $this->uow->computeChangeSets();
+        $changeset = $this->uow->getDocumentChangeSet($file);
+        $this->assertArrayNotHasKey('filename', $changeset);
+        $this->assertArrayNotHasKey('chunkSize', $changeset);
+        $this->assertArrayNotHasKey('length', $changeset);
+        $this->assertArrayNotHasKey('uploadDate', $changeset);
+        $this->assertArrayHasKey('metadata', $changeset);
+    }
+
+    public function testComputingChangesetForFileWithoutMetadataThrowsNoError(): void
+    {
+        $file = new FileWithoutMetadata();
+
+        $access = \Closure::bind(function (string $property, $value): void {
+            $this->$property = $value;
+        }, $file, $file);
+
+        $access('filename', 'foo');
+
+        $data = [
+            '_id' => 123,
+            'filename' => 'file.txt',
+        ];
+
+        $this->uow->registerManaged($file, spl_object_hash($file), $data);
+
+        $this->uow->computeChangeSets();
+        $changeset = $this->uow->getDocumentChangeSet($file);
+
+        $this->assertSame([], $changeset);
     }
 
     /**
@@ -351,9 +405,9 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     public function testScheduleForUpdateWithArrays($origData, $updateData, $shouldInUpdate)
     {
         $pb = $this->getMockPersistenceBuilder();
-        $class = $this->dm->getClassMetadata("Doctrine\ODM\MongoDB\Tests\ArrayTest");
+        $class = $this->dm->getClassMetadata(ArrayTest::class);
         $persister = $this->getMockDocumentPersister($pb, $class);
-        $this->uow->setDocumentPersister('Doctrine\ODM\MongoDB\Tests\ArrayTest', $persister);
+        $this->uow->setDocumentPersister(ArrayTest::class, $persister);
 
         $arrayTest = new ArrayTest($origData);
         $this->uow->persist($arrayTest);
@@ -372,53 +426,53 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function getScheduleForUpdateWithArraysTests()
     {
-        return array(
-            array(
+        return [
+            [
                 null,
-                array('bar' => 'foo'),
-                true
-            ),
-            array(
-                array('foo' => 'bar'),
+                ['bar' => 'foo'],
+                true,
+            ],
+            [
+                ['foo' => 'bar'],
                 null,
-                true
-            ),
-            array(
-                array('foo' => 'bar'),
-                array('bar' => 'foo'),
-                true
-            ),
-            array(
-                array('foo' => 'bar'),
-                array('foo' => 'foo'),
-                true
-            ),
-            array(
-                array('foo' => 'bar'),
-                array('foo' => 'bar'),
-                false
-            ),
-            array(
-                array('foo' => 'bar'),
-                array('foo' => true),
-                true
-            ),
-            array(
-                array('foo' => 'bar'),
-                array('foo' => 99),
-                true
-            ),
-            array(
-                array('foo' => 99),
-                array('foo' => true),
-                true
-            ),
-            array(
-                array('foo' => true),
-                array('foo' => true),
-                false
-            ),
-        );
+                true,
+            ],
+            [
+                ['foo' => 'bar'],
+                ['bar' => 'foo'],
+                true,
+            ],
+            [
+                ['foo' => 'bar'],
+                ['foo' => 'foo'],
+                true,
+            ],
+            [
+                ['foo' => 'bar'],
+                ['foo' => 'bar'],
+                false,
+            ],
+            [
+                ['foo' => 'bar'],
+                ['foo' => true],
+                true,
+            ],
+            [
+                ['foo' => 'bar'],
+                ['foo' => 99],
+                true,
+            ],
+            [
+                ['foo' => 99],
+                ['foo' => true],
+                true,
+            ],
+            [
+                ['foo' => true],
+                ['foo' => true],
+                false,
+            ],
+        ];
     }
 
     public function testRegisterManagedEmbeddedDocumentWithMappedIdAndNullValue()
@@ -426,7 +480,7 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $document = new EmbeddedDocumentWithId();
         $oid = spl_object_hash($document);
 
-        $this->uow->registerManaged($document, null, array());
+        $this->uow->registerManaged($document, null, []);
 
         $this->assertEquals($oid, $this->uow->getDocumentIdentifier($document));
     }
@@ -436,7 +490,7 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $document = new EmbeddedDocumentWithoutId();
         $oid = spl_object_hash($document);
 
-        $this->uow->registerManaged($document, null, array());
+        $this->uow->registerManaged($document, null, []);
 
         $this->assertEquals($oid, $this->uow->getDocumentIdentifier($document));
     }
@@ -446,9 +500,19 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $document = new EmbeddedDocumentWithIdStrategyNone();
         $oid = spl_object_hash($document);
 
-        $this->uow->registerManaged($document, null, array());
+        $this->uow->registerManaged($document, null, []);
 
         $this->assertEquals($oid, $this->uow->getDocumentIdentifier($document));
+    }
+
+    public function testPersistNewGridFSFile(): void
+    {
+        $file = new File();
+
+        $this->expectException(MongoDBException::class);
+        $this->expectExceptionMessage(sprintf('Cannot persist GridFS file for class "%s" through UnitOfWork', File::class));
+
+        $this->uow->persist($file);
     }
 
     public function testPersistRemovedDocument()
@@ -516,8 +580,8 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testPersistingEmbeddedDocumentWithoutIdentifier()
     {
-        $address = new \Documents\Address();
-        $user = new \Documents\User();
+        $address = new Address();
+        $user = new User();
         $user->setAddress($address);
 
         $this->assertEquals(UnitOfWork::STATE_NEW, $this->uow->getDocumentState($address));
@@ -539,8 +603,8 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testEmbeddedDocumentChangeSets()
     {
-        $address = new \Documents\Address();
-        $user = new \Documents\User();
+        $address = new Address();
+        $user = new User();
         $user->setAddress($address);
 
         $this->uow->persist($user);
@@ -557,24 +621,20 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->uow->computeChangeSets();
         $changeSet = $this->uow->getDocumentChangeSet($address);
 
-        $this->assertTrue(isset($changeSet['city']));
+        $this->assertArrayHasKey('city', $changeSet);
         $this->assertEquals('Nashville', $changeSet['city'][1]);
     }
 
     public function testGetClassNameForAssociation()
     {
-        $mapping = array(
+        $mapping = [
             'discriminatorField' => 'type',
-            'discriminatorMap' => array(
-                'forum_user' => 'Documents\ForumUser',
-            ),
-            'targetDocument' => 'Documents\User',
-        );
-        $data = array(
-            'type' => 'forum_user',
-        );
+            'discriminatorMap' => ['forum_user' => ForumUser::class],
+            'targetDocument' => User::class,
+        ];
+        $data = ['type' => 'forum_user'];
 
-        $this->assertEquals('Documents\ForumUser', $this->uow->getClassNameForAssociation($mapping, $data));
+        $this->assertEquals(ForumUser::class, $this->uow->getClassNameForAssociation($mapping, $data));
     }
 
     public function testGetClassNameForAssociationWithClassMetadataDiscriminatorMap()
@@ -582,40 +642,32 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $dm = $this->getMockDocumentManager();
         $uow = new UnitOfWork($dm, $this->getMockEventManager(), $this->getMockHydratorFactory());
 
-        $mapping = array(
-            'targetDocument' => 'Documents\User',
-        );
-        $data = array(
-            'type' => 'forum_user',
-        );
+        $mapping = ['targetDocument' => User::class];
+        $data = ['type' => 'forum_user'];
 
-        $userClassMetadata = new ClassMetadata('Documents\ForumUser');
+        $userClassMetadata = new ClassMetadata(ForumUser::class);
         $userClassMetadata->discriminatorField = 'type';
-        $userClassMetadata->discriminatorMap = array(
-            'forum_user' => 'Documents\ForumUser',
-        );
+        $userClassMetadata->discriminatorMap = ['forum_user' => ForumUser::class];
 
         $dm->expects($this->once())
             ->method('getClassMetadata')
-            ->with('Documents\User')
+            ->with(User::class)
             ->will($this->returnValue($userClassMetadata));
 
-        $this->assertEquals('Documents\ForumUser', $uow->getClassNameForAssociation($mapping, $data));
+        $this->assertEquals(ForumUser::class, $uow->getClassNameForAssociation($mapping, $data));
     }
 
     public function testGetClassNameForAssociationReturnsTargetDocumentWithNullData()
     {
-        $mapping = array(
-            'targetDocument' => 'Documents\User',
-        );
-        $this->assertEquals('Documents\User', $this->uow->getClassNameForAssociation($mapping, null));
+        $mapping = ['targetDocument' => User::class];
+        $this->assertEquals(User::class, $this->uow->getClassNameForAssociation($mapping, null));
     }
 
     public function testRecomputeChangesetForUninitializedProxyDoesNotCreateChangeset()
     {
-        $user = new \Documents\ForumUser();
+        $user = new ForumUser();
         $user->username = '12345';
-        $user->setAvatar(new \Documents\ForumAvatar());
+        $user->setAvatar(new ForumAvatar());
 
         $this->dm->persist($user);
         $this->dm->flush();
@@ -623,16 +675,33 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $id = $user->getId();
         $this->dm->clear();
 
-        $user = $this->dm->find('\Documents\ForumUser', $id);
-        $this->assertInstanceOf('\Documents\ForumUser', $user);
+        $user = $this->dm->find(ForumUser::class, $id);
+        $this->assertInstanceOf(ForumUser::class, $user);
 
-        $this->assertInstanceOf('Doctrine\ODM\MongoDB\Proxy\Proxy', $user->getAvatar());
+        $this->assertInstanceOf(Proxy::class, $user->getAvatar());
 
-        $classMetadata = $this->dm->getClassMetadata('Documents\ForumAvatar');
+        $classMetadata = $this->dm->getClassMetadata(ForumAvatar::class);
 
         $this->uow->recomputeSingleDocumentChangeSet($classMetadata, $user->getAvatar());
 
-        $this->assertEquals(array(), $this->uow->getDocumentChangeSet($user->getAvatar()));
+        $this->assertEquals([], $this->uow->getDocumentChangeSet($user->getAvatar()));
+    }
+
+    public function testCommitsInProgressIsUpdatedOnException()
+    {
+        $this->dm->getEventManager()->addEventSubscriber(
+            new ExceptionThrowingListenerMock()
+        );
+        $user = new ForumUser();
+        $user->username = '12345';
+
+        $this->dm->persist($user);
+
+        $this->expectException(\Throwable::class);
+        $this->expectExceptionMessage('This should not happen');
+
+        $this->dm->flush();
+        $this->assertAttributeSame(0, 'commitsInProgress', $this->dm->getUnitOfWork());
     }
 
 
@@ -649,36 +718,36 @@ class UnitOfWorkTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     /**
      * Gets mock HydratorFactory instance
      *
-     * @return \Doctrine\ODM\MongoDB\Hydrator\HydratorFactory
+     * @return HydratorFactory
      */
     private function getMockHydratorFactory()
     {
-        return $this->createMock('Doctrine\ODM\MongoDB\Hydrator\HydratorFactory');
+        return $this->createMock(HydratorFactory::class);
     }
 
     /**
      * Gets mock EventManager instance
      *
-     * @return \Doctrine\Common\EventManager
+     * @return EventManager
      */
     private function getMockEventManager()
     {
-        return $this->createMock('Doctrine\Common\EventManager');
+        return $this->createMock(EventManager::class);
     }
 
     private function getMockPersistenceBuilder()
     {
-        return $this->createMock('Doctrine\ODM\MongoDB\Persisters\PersistenceBuilder');
+        return $this->createMock(PersistenceBuilder::class);
     }
 
     private function getMockDocumentManager()
     {
-        return $this->createMock('Doctrine\ODM\MongoDB\DocumentManager');
+        return $this->createMock(DocumentManager::class);
     }
 
     private function getMockDocumentPersister(PersistenceBuilder $pb, ClassMetadata $class)
     {
-        return new DocumentPersisterMock($pb, $this->dm, $this->dm->getEventManager(), $this->uow, $this->dm->getHydratorFactory(), $class);
+        return new DocumentPersisterMock($pb, $this->dm, $this->uow, $this->dm->getHydratorFactory(), $class);
     }
 
     protected function getClassMetadata($class, $flag)
@@ -703,9 +772,9 @@ class ParentAssociationTest
  * @ODM\Document
  * @ODM\ChangeTrackingPolicy("NOTIFY")
  */
-class NotifyChangedDocument implements \Doctrine\Common\NotifyPropertyChanged
+class NotifyChangedDocument implements NotifyPropertyChanged
 {
-    private $_listeners = array();
+    private $_listeners = [];
 
     /** @ODM\Id(type="int_id", strategy="none") */
     private $id;
@@ -713,12 +782,12 @@ class NotifyChangedDocument implements \Doctrine\Common\NotifyPropertyChanged
     /** @ODM\Field(type="string") */
     private $data;
 
-    /** @ODM\ReferenceMany(targetDocument="NotifyChangedRelatedItem") */
+    /** @ODM\ReferenceMany(targetDocument=NotifyChangedRelatedItem::class) */
     private $items;
 
     private $transient; // not persisted
 
-    public function  __construct()
+    public function __construct()
     {
         $this->items = new ArrayCollection();
     }
@@ -740,10 +809,12 @@ class NotifyChangedDocument implements \Doctrine\Common\NotifyPropertyChanged
 
     public function setData($data)
     {
-        if ($data != $this->data) {
-            $this->_onPropertyChanged('data', $this->data, $data);
-            $this->data = $data;
+        if ($data === $this->data) {
+            return;
         }
+
+        $this->_onPropertyChanged('data', $this->data, $data);
+        $this->data = $data;
     }
 
     public function getItems()
@@ -753,10 +824,12 @@ class NotifyChangedDocument implements \Doctrine\Common\NotifyPropertyChanged
 
     public function setTransient($value)
     {
-        if ($value != $this->transient) {
-            $this->_onPropertyChanged('transient', $this->transient, $value);
-            $this->transient = $value;
+        if ($value === $this->transient) {
+            return;
         }
+
+        $this->_onPropertyChanged('transient', $this->transient, $value);
+        $this->transient = $value;
     }
 
     public function addPropertyChangedListener(PropertyChangedListener $listener)
@@ -778,7 +851,7 @@ class NotifyChangedRelatedItem
     /** @ODM\Id(type="int_id", strategy="none") */
     private $id;
 
-    /** @ODM\ReferenceOne(targetDocument="NotifyChangedDocument") */
+    /** @ODM\ReferenceOne(targetDocument=NotifyChangedDocument::class) */
     private $owner;
 
     public function getId()
@@ -864,6 +937,6 @@ class PersistRemovedEmbeddedDocument
     /** @ODM\Id */
     public $id;
 
-    /** @ODM\EmbedOne(targetDocument="EmbeddedDocumentWithId") */
+    /** @ODM\EmbedOne(targetDocument=EmbeddedDocumentWithId::class) */
     public $embedded;
 }

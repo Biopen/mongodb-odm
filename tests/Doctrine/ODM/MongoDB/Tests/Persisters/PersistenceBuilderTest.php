@@ -1,15 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Persisters;
 
+use Doctrine\ODM\MongoDB\Iterator\Iterator;
+use Doctrine\ODM\MongoDB\Query\Builder;
 use Doctrine\ODM\MongoDB\Tests\BaseTest;
-
-use Documents\Ecommerce\Currency;
-use Documents\Ecommerce\ConfigurableProduct;
 use Documents\CmsArticle;
 use Documents\CmsComment;
+use Documents\Ecommerce\ConfigurableProduct;
+use Documents\Ecommerce\Currency;
 use Documents\Functional\SameCollection1;
 use Documents\Functional\SameCollection2;
+use MongoDB\BSON\ObjectId;
+use function array_keys;
+use function get_class;
 
 class PersistenceBuilderTest extends BaseTest
 {
@@ -39,20 +45,16 @@ class PersistenceBuilderTest extends BaseTest
         $this->uow->computeChangeSets();
 
         /**
-         * @var \Doctrine\ODM\MongoDB\Query\Builder $qb
+         * @var Builder $qb
          */
-        $qb = $this->dm->createQueryBuilder('Documents\Functional\SameCollection1');
-        $qb->update()
+        $qb = $this->dm->createQueryBuilder(SameCollection1::class);
+        $qb->updateOne()
             ->field('ok')->set(true)
             ->field('test')->set('OK! TEST')
             ->field('id')->equals($id);
 
-        /**
-         * @var \Doctrine\ODM\MongoDB\Query\Query $query
-         * @var \Doctrine\ODM\MongoDB\Cursor $results
-         */
         $query = $qb->getQuery();
-        $results = $query->execute();
+        $query->execute();
 
         $this->dm->refresh($testCollection);
 
@@ -64,11 +66,11 @@ class PersistenceBuilderTest extends BaseTest
         $sameCollection1 = new SameCollection1();
         $sameCollection2a = new SameCollection2();
         $sameCollection2b = new SameCollection2();
-        $ids = array(
+        $ids = [
             '4f28aa84acee413889000001',
             '4f28aa84acee41388900002a',
-            '4f28aa84acee41388900002b'
-        );
+            '4f28aa84acee41388900002b',
+        ];
 
         $sameCollection1->id = $ids[0];
         $sameCollection1->name = 'First entry in SameCollection1';
@@ -91,29 +93,24 @@ class PersistenceBuilderTest extends BaseTest
         $this->uow->computeChangeSets();
 
         /**
-         * @var \Doctrine\ODM\MongoDB\Query\Builder $qb
+         * @var Builder $qb
          */
-        $qb = $this->dm->createQueryBuilder('Documents\Functional\SameCollection2');
+        $qb = $this->dm->createQueryBuilder(SameCollection2::class);
         $qb
             ->field('id')->in($ids)
             ->select('id')->hydrate(false);
-        /**
-         * @var \Doctrine\ODM\MongoDB\Query\Query $query
-         * @var \Doctrine\ODM\MongoDB\Cursor $results
-         */
         $query = $qb->getQuery();
         $debug = $query->debug('query');
         $results = $query->execute();
 
-        $this->assertInstanceOf('Doctrine\MongoDB\CursorInterface', $results);
+        $this->assertInstanceOf(Iterator::class, $results);
 
-        $targetClass = $this->dm->getClassMetadata('Documents\Functional\SameCollection2');
-        $mongoId1 = $targetClass->getDatabaseIdentifierValue($ids[1]);
+        $targetClass = $this->dm->getClassMetadata(SameCollection2::class);
+        $identifier1 = $targetClass->getDatabaseIdentifierValue($ids[1]);
 
-        $this->assertEquals($mongoId1, $debug['_id']['$in'][1]);
+        $this->assertEquals($identifier1, $debug['_id']['$in'][1]);
 
-
-        $this->assertEquals(2, $results->count(true));
+        $this->assertCount(2, $results->toArray());
     }
 
     public function testPrepareUpdateDataDoesNotIncludeId()
@@ -145,13 +142,13 @@ class PersistenceBuilderTest extends BaseTest
         $this->dm->persist($comment);
         $this->uow->computeChangeSets();
 
-        $expectedData = array(
-            'article' => array(
-                '$db' => DOCTRINE_MONGODB_DATABASE,
-                '$id' => new \MongoId($article->id),
-                '$ref' => 'CmsArticle'
-            )
-        );
+        $expectedData = [
+            'article' => [
+                '$id' => new ObjectId($article->id),
+                '$ref' => 'CmsArticle',
+            ],
+            'nullableField' => null,
+        ];
         $this->assertDocumentInsertData($expectedData, $this->pb->prepareInsertData($comment));
     }
 
@@ -170,13 +167,13 @@ class PersistenceBuilderTest extends BaseTest
         $this->dm->persist($comment);
         $this->uow->computeChangeSets();
 
-        $expectedData = array(
-            'article' => array(
-                '$db' => DOCTRINE_MONGODB_DATABASE,
-                '$id' => new \MongoId($article->id),
-                '$ref' => 'CmsArticle'
-            )
-        );
+        $expectedData = [
+            'article' => [
+                '$id' => new ObjectId($article->id),
+                '$ref' => 'CmsArticle',
+            ],
+            'nullableField' => null,
+        ];
         $this->assertDocumentInsertData($expectedData, $this->pb->prepareInsertData($comment));
     }
 
@@ -197,18 +194,18 @@ class PersistenceBuilderTest extends BaseTest
         $this->dm->persist($comment);
         $this->uow->computeChangeSets();
 
-        $expectedData = array(
-            '$set' => array(
+        $expectedData = [
+            '$set' => [
                 'topic' => 'test',
                 'text' => 'text',
-                'article' => array(
-                    '$db' => DOCTRINE_MONGODB_DATABASE,
-                    '$id' => new \MongoId($article->id),
-                    '$ref' => 'CmsArticle'
-                ),
-                '_id' => new \MongoId($comment->id),
-            )
-        );
+                'article' => [
+                    '$id' => new ObjectId($article->id),
+                    '$ref' => 'CmsArticle',
+                ],
+                '_id' => new ObjectId($comment->id),
+            ],
+            '$setOnInsert' => ['nullableField' => null],
+        ];
         $this->assertEquals($expectedData, $this->pb->prepareUpsertData($comment));
     }
 
@@ -230,22 +227,22 @@ class PersistenceBuilderTest extends BaseTest
      */
     public function getDocumentsAndExpectedData()
     {
-        return array(
-            array(new ConfigurableProduct('Test Product'), array('name' => 'Test Product')),
-            array(new Currency('USD', 1), array('name' => 'USD', 'multiplier' => 1)),
-        );
+        return [
+            [new ConfigurableProduct('Test Product'), ['name' => 'Test Product']],
+            [new Currency('USD', 1), ['name' => 'USD', 'multiplier' => 1]],
+        ];
     }
 
-    private function assertDocumentInsertData(array $expectedData, array $preparedData = null)
+    private function assertDocumentInsertData(array $expectedData, ?array $preparedData = null)
     {
         foreach ($preparedData as $key => $value) {
             if ($key === '_id') {
-                $this->assertInstanceOf('MongoId', $value);
+                $this->assertInstanceOf(ObjectId::class, $value);
                 continue;
             }
             $this->assertEquals($expectedData[$key], $value);
         }
-        if ( ! isset($preparedData['_id'])) {
+        if (! isset($preparedData['_id'])) {
             $this->fail('insert data should always contain id');
         }
         unset($preparedData['_id']);
@@ -272,28 +269,24 @@ class PersistenceBuilderTest extends BaseTest
         $commentId = (string) $comment->id;
 
         /**
-         * @var \Doctrine\ODM\MongoDB\Query\Builder $qb
+         * @var Builder $qb
          */
-        $qb = $this->dm->createQueryBuilder('Documents\CmsComment');
+        $qb = $this->dm->createQueryBuilder(CmsComment::class);
         $qb
-            ->field('article.id')->in(array($articleId));
-        /**
-         * @var \Doctrine\ODM\MongoDB\Query\Query $query
-         * @var \Doctrine\ODM\MongoDB\Cursor $results
-         */
+            ->field('article.id')->in([$articleId]);
         $query = $qb->getQuery();
         $results = $query->execute();
 
-        $this->assertInstanceOf('Doctrine\MongoDB\CursorInterface', $results);
+        $this->assertInstanceOf(Iterator::class, $results);
 
-        $singleResult = $results->getSingleResult();
-        $this->assertInstanceOf('Documents\CmsComment', $singleResult);
+        $singleResult = $query->getSingleResult();
+        $this->assertInstanceOf(CmsComment::class, $singleResult);
 
         $this->assertEquals($commentId, $singleResult->id);
 
-        $this->assertInstanceOf('Documents\CmsArticle', $singleResult->article);
+        $this->assertInstanceOf(CmsArticle::class, $singleResult->article);
 
         $this->assertEquals($articleId, $singleResult->article->id);
-        $this->assertEquals(1, $results->count(true));
+        $this->assertCount(1, $results->toArray());
     }
 }

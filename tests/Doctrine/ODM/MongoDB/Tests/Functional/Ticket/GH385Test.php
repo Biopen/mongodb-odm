@@ -1,29 +1,32 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests;
 
-use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Documents\User;
+use MongoDB\BSON\ObjectId;
 
 class GH385Test extends BaseTest
 {
     public function testQueryBuilderShouldPrepareUnmappedFields()
     {
-        $mongoId = new \MongoId();
+        $identifier = new ObjectId();
 
-        $qb = $this->dm->createQueryBuilder('Documents\User')
+        $qb = $this->dm->createQueryBuilder(User::class)
             ->upsert()
-            ->update()
-            ->field('id')->equals($mongoId)
+            ->updateOne()
+            ->field('id')->equals($identifier)
             ->field('foo.bar.level3a')->inc(1)
             ->field('foo.bar.level3b')->inc(1);
 
         $debug = $qb->getQuery()->getQuery();
 
-        $this->assertEquals(array('$inc' => array('foo.bar.level3a' => 1, 'foo.bar.level3b' => 1)), $debug['newObj']);
+        $this->assertEquals(['$inc' => ['foo.bar.level3a' => 1, 'foo.bar.level3b' => 1]], $debug['newObj']);
 
         $qb->getQuery()->execute();
 
-        $check = $this->dm->getDocumentCollection('Documents\User')->findOne(array('_id' => $mongoId));
+        $check = $this->dm->getDocumentCollection(User::class)->findOne(['_id' => $identifier]);
         $this->assertNotNull($check);
         $this->assertTrue(isset($check['foo']['bar']['level3a']));
         $this->assertTrue(isset($check['foo']['bar']['level3b']));

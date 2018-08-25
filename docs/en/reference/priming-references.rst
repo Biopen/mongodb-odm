@@ -18,7 +18,7 @@ Consider the following abbreviated model:
     /** @Document */
     class User
     {
-        /** @ReferenceMany(targetDocument="Account") */
+        /** @ReferenceMany(targetDocument=Account::class) */
         private $accounts;
     }
 
@@ -72,7 +72,7 @@ builder's ``prime()`` method allows us to do just that.
          * not query an additional query.
          */
         foreach ($user->getAccounts() as $account) {
-            
+
         }
     }
 
@@ -83,7 +83,7 @@ queries (one per discriminated class name).
 
 .. note::
 
-    Priming is also compatible with :ref:`simple references <storing_references>`
+    Priming is also compatible with :ref:`ID references <storing_references>`
     and discriminated references. When priming discriminated references, ODM
     will issue one query per distinct class among the referenced document(s).
 
@@ -111,7 +111,7 @@ specifying them in the mapping:
     /** @Document */
     class User
     {
-        /** @ReferenceMany(targetDocument="Account", prime={"user"}) */
+        /** @ReferenceMany(targetDocument=Account::class, prime={"user"}) */
         private $accounts;
     }
 
@@ -144,10 +144,6 @@ As an example, we can look at the default callable, which is found in the
     function(DocumentManager $dm, ClassMetadata $class, array $ids, array $hints) {
         $qb = $dm->createQueryBuilder($class->name)
             ->field($class->identifier)->in($ids);
-
-        if ( ! empty($hints[Query::HINT_SLAVE_OKAY])) {
-            $qb->slaveOkay(true);
-        }
 
         if ( ! empty($hints[Query::HINT_READ_PREFERENCE])) {
             $qb->setReadPreference(

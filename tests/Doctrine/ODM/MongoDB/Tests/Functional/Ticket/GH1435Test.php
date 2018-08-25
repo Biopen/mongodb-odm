@@ -1,14 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests;
 
-use Doctrine\ODM\MongoDB\Mapping\Driver\YamlDriver;
+use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use MongoDB\BSON\ObjectId;
 
 class GH1435Test extends BaseTest
 {
     public function testUpsert()
     {
-        $id = (string) new \MongoId();
+        $id = (string) new ObjectId();
 
         $document = new GH1435Document();
         $document->id = $id;
@@ -46,7 +49,7 @@ class GH1435Test extends BaseTest
         $document->name = 'test';
 
         $this->dm->persist($document);
-        $this->dm->flush($document);
+        $this->dm->flush();
         $this->dm->clear();
 
         $document = $this->dm->getRepository(GH1435DocumentIncrement::class)->findOneBy([]);
@@ -61,23 +64,28 @@ class GH1435Test extends BaseTest
         $this->assertNotNull($document);
         $this->assertSame(1, $document->id);
     }
-
-    protected function createMetadataDriverImpl()
-    {
-        return new YamlDriver(__DIR__ . '/GH1435');
-    }
 }
 
+/**
+ * @ODM\Document()
+ */
 class GH1435Document
 {
+    /** @ODM\Id() */
     public $id;
 
+    /** @ODM\Field(type="string", nullable=true) */
     public $name;
 }
 
+/**
+ * @ODM\Document()
+ */
 class GH1435DocumentIncrement
 {
+    /** @ODM\Id(strategy="increment") */
     public $id;
 
+    /** @ODM\Field(type="string", nullable=true) */
     public $name;
 }

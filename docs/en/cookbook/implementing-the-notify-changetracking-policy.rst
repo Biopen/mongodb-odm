@@ -30,13 +30,13 @@ implement the ``NotifyPropertyChanged`` interface from the
     {
         private $_listeners = array();
 
-        public function addPropertyChangedListener(PropertyChangedListener $listener)
+        public function addPropertyChangedListener(PropertyChangedListener $listener): void
         {
             $this->_listeners[] = $listener;
         }
 
         /** Notifies listeners of a change. */
-        protected function _onPropertyChanged($propName, $oldValue, $newValue)
+        protected function _onPropertyChanged($propName, $oldValue, $newValue): void
         {
             if ($this->_listeners) {
                 foreach ($this->_listeners as $listener) {
@@ -54,13 +54,13 @@ listeners:
 
     <?php
 
-    // Mapping not shown, either in annotations, xml or yaml as usual
+    // Mapping not shown, either in annotations or xml as usual
     class MyEntity extends DomainObject
     {
         private $data;
         // ... other fields as usual
 
-        public function setData($data)
+        public function setData($data): void
         {
             if ($data != $this->data) { // check: is it actually modified?
                 $this->_onPropertyChanged('data', $this->data, $data);

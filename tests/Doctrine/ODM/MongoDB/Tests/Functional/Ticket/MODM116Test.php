@@ -1,10 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use function array_values;
+use function get_class;
 
-class MODM116Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class MODM116Test extends BaseTest
 {
     public function testIssue()
     {
@@ -23,12 +28,12 @@ class MODM116Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $check = $this->dm->getDocumentCollection(get_class($parent))->find()->toArray();
         $check = array_values($check);
-        $this->assertEquals(1, count($check));
+        $this->assertCount(1, $check);
         $this->assertEquals('test', $check[0]['name']);
 
         $check = $this->dm->getDocumentCollection(get_class($parent->getChild()))->find()->toArray();
         $check = array_values($check);
-        $this->assertEquals(1, count($check));
+        $this->assertCount(1, $check);
         $this->assertEquals('ok', $check[0]['name']);
     }
 }
@@ -42,7 +47,7 @@ class MODM116Parent
     /** @ODM\Field(type="string") */
     private $name;
 
-    /** @ODM\ReferenceOne(targetDocument="MODM116Child") **/
+    /** @ODM\ReferenceOne(targetDocument=MODM116Child::class) **/
     private $child;
 
     public function getId()

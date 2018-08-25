@@ -1,17 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ODM\MongoDB\Configuration;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
-use Doctrine\ODM\MongoDB\Mapping\ClassMetadataInfo;
+use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
 use Doctrine\ODM\MongoDB\PersistentCollection;
 use Doctrine\ODM\MongoDB\PersistentCollection\PersistentCollectionInterface;
+use Doctrine\ODM\MongoDB\Repository\GridFSRepository;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\File;
 use Documents\ProfileNotify;
+use function get_class;
 
-class CustomCollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class CustomCollectionsTest extends BaseTest
 {
     public function testMappingNamespaceIsAdded()
     {
@@ -33,14 +37,14 @@ class CustomCollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
      */
     public function testCollectionClassHasToImplementCommonInterface()
     {
-        $cm = new ClassMetadataInfo('stdClass');
+        $cm = new ClassMetadata('stdClass');
 
-        $cm->mapField(array(
+        $cm->mapField([
             'fieldName' => 'assoc',
             'reference' => true,
             'type' => 'many',
             'collectionClass' => 'stdClass',
-        ));
+        ]);
     }
 
     public function testGeneratedClassExtendsBaseCollection()
@@ -77,7 +81,7 @@ class CustomCollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->assertInstanceOf(MyEmbedsCollection::class, $d->coll);
         $this->assertCount(1, $d->coll->getEnabled());
         $this->assertCount(1, $d->coll->getByName('#1'));
-        
+
         $this->assertInstanceOf(PersistentCollection::class, $d->boring);
         $this->assertCount(2, $d->boring);
     }
@@ -140,12 +144,14 @@ class CustomCollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testModifyingCollectionInChangeTrackingNotifyDocument()
     {
+        /** @var GridFSRepository $repository */
+        $repository = $this->dm->getRepository(File::class);
+
+        $f1 = $repository->uploadFromFile(__FILE__);
+        $f2 = $repository->uploadFromFile(__FILE__);
+
         $profile = new ProfileNotify();
-        $f1 = new File();
-        $f1->setName('av.jpeg');
         $profile->getImages()->add($f1);
-        $f2 = new File();
-        $f2->setName('ghost.gif');
         $profile->getImages()->add($f2);
         $this->dm->persist($profile);
         $this->dm->flush();
@@ -157,8 +163,8 @@ class CustomCollectionsTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
         $profile = $this->dm->find(get_class($profile), $profile->getProfileId());
         $this->assertCount(2, $profile->getImages());
-        $this->assertEquals($f2->getName(), $profile->getImages()[0]->getName());
-        $this->assertEquals($f1->getName(), $profile->getImages()[1]->getName());
+        $this->assertEquals($f2->getId(), $profile->getImages()[0]->getId());
+        $this->assertEquals($f1->getId(), $profile->getImages()[1]->getId());
     }
 }
 
@@ -172,24 +178,24 @@ class DocumentWithCustomCollection
 
     /**
      * @ODM\EmbedMany(
-     *   collectionClass="MyEmbedsCollection",
-     *   targetDocument="EmbeddedDocumentInCustomCollection"
+     *   collectionClass=MyEmbedsCollection::class,
+     *   targetDocument=EmbeddedDocumentInCustomCollection::class
      * )
      */
     public $coll;
 
     /**
      * @ODM\EmbedMany(
-     *   targetDocument="EmbeddedDocumentInCustomCollection"
+     *   targetDocument=EmbeddedDocumentInCustomCollection::class
      * )
      */
     public $boring;
 
     /**
      * @ODM\ReferenceMany(
-     *   collectionClass="MyDocumentsCollection",
+     *   collectionClass=MyDocumentsCollection::class,
      *   orphanRemoval=true,
-     *   targetDocument="DocumentWithCustomCollection"
+     *   targetDocument=DocumentWithCustomCollection::class
      * )
      */
     public $refMany;
@@ -198,7 +204,7 @@ class DocumentWithCustomCollection
      * @ODM\ReferenceMany(
      *   collectionClass="\Doctrine\ODM\MongoDB\Tests\Functional\MyDocumentsCollection",
      *   mappedBy="refMany",
-     *   targetDocument="DocumentWithCustomCollection"
+     *   targetDocument=DocumentWithCustomCollection::class
      * )
      */
     public $inverseRefMany;
@@ -234,14 +240,14 @@ class MyEmbedsCollection extends ArrayCollection
 {
     public function getByName($name)
     {
-        return $this->filter(function($item) use ($name) {
+        return $this->filter(function ($item) use ($name) {
             return $item->name === $name;
         });
     }
 
     public function getEnabled()
     {
-        return $this->filter(function($item) {
+        return $this->filter(function ($item) {
             return $item->enabled;
         });
     }
@@ -258,7 +264,7 @@ class MyDocumentsCollection extends ArrayCollection
 {
     public function havingEmbeds()
     {
-        return $this->filter(function($item) {
+        return $this->filter(function ($item) {
             return $item->coll->count();
         });
     }

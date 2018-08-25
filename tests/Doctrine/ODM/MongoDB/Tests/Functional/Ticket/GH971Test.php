@@ -1,22 +1,24 @@
 <?php
 
+declare(strict_types=1);
 
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 
-class GH971Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH971Test extends BaseTest
 {
     public function testUpdateOfInheritedDocumentUsingFindAndUpdate()
     {
-        $name = "Ferrari";
-        $features = array(
-            "Super Engine",
-            "Huge Wheels"
-        );
+        $name = 'Ferrari';
+        $features = [
+            'Super Engine',
+            'Huge Wheels',
+        ];
 
         //first query, create Car with name "Ferrari"
-        $this->dm->createQueryBuilder(__NAMESPACE__ . '\Car')
+        $this->dm->createQueryBuilder(Car::class)
             ->findAndUpdate()
             ->upsert(true)
             ->field('name')->equals($name)
@@ -25,7 +27,7 @@ class GH971Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
             ->getQuery()->execute();
 
         //second query: update existing "Ferrari" with new feature
-        $this->dm->createQueryBuilder(__NAMESPACE__ . '\Car')
+        $this->dm->createQueryBuilder(Car::class)
             ->findAndUpdate()
             ->upsert(true)
             ->field('name')->equals($name)
@@ -33,7 +35,7 @@ class GH971Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
             ->field('features')->push($features[1])
             ->getQuery()->execute();
 
-        $results = $this->dm->getRepository(__NAMESPACE__ . '\Car')->findAll();
+        $results = $this->dm->getRepository(Car::class)->findAll();
         $this->assertCount(1, $results);
     }
 
@@ -43,25 +45,25 @@ class GH971Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
      */
     public function testUpsertThrowsExceptionWithIndecisiveDiscriminator()
     {
-        $this->dm->createQueryBuilder(__NAMESPACE__ . '\Bicycle')
+        $this->dm->createQueryBuilder(Bicycle::class)
             ->findAndUpdate()
             ->upsert(true)
-            ->field('name')->equals("Cool")
-            ->field('features')->push("2 people")
+            ->field('name')->equals('Cool')
+            ->field('features')->push('2 people')
             ->getQuery()->execute();
     }
 
     public function testUpsertWillUseProvidedDiscriminator()
     {
-        $this->dm->createQueryBuilder(__NAMESPACE__ . '\Bicycle')
+        $this->dm->createQueryBuilder(Bicycle::class)
             ->findAndUpdate()
             ->upsert(true)
             ->field('type')->equals('tandem')
-            ->field('name')->equals("Cool")
-            ->field('features')->push("2 people")
+            ->field('name')->equals('Cool')
+            ->field('features')->push('2 people')
             ->getQuery()->execute();
 
-        $results = $this->dm->getRepository(__NAMESPACE__ . '\Tandem')->findAll();
+        $results = $this->dm->getRepository(Tandem::class)->findAll();
         $this->assertCount(1, $results);
     }
 }
@@ -70,7 +72,7 @@ class GH971Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
  * @ODM\Document
  * @ODM\InheritanceType("SINGLE_COLLECTION")
  * @ODM\DiscriminatorField("type")
- * @ODM\DiscriminatorMap({"car"="Car", "bicycle"="Bicycle", "tandem"="Tandem"})
+ * @ODM\DiscriminatorMap({"car"=Car::class, "bicycle"=Bicycle::class, "tandem"=Tandem::class})
  */
 class Vehicle
 {
@@ -87,14 +89,20 @@ class Vehicle
 /**
  * @ODM\Document
  */
-class Car extends Vehicle {}
+class Car extends Vehicle
+{
+}
 
 /**
  * @ODM\Document
  */
-class Bicycle extends Vehicle {}
+class Bicycle extends Vehicle
+{
+}
 
 /**
  * @ODM\Document
  */
-class Tandem extends Bicycle {}
+class Tandem extends Bicycle
+{
+}

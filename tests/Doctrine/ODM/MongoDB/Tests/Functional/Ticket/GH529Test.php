@@ -1,16 +1,21 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional\Ticket;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use MongoDB\BSON\ObjectId;
+use function get_class;
 
-class GH529Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class GH529Test extends BaseTest
 {
     public function testAutoIdWithConsistentValues()
     {
-        $mongoId = new \MongoId();
+        $identifier = new ObjectId();
         $doc = new GH529AutoIdDocument();
-        $doc->id = $mongoId;
+        $doc->id = $identifier;
 
         $this->dm->persist($doc);
         $this->dm->flush();
@@ -19,7 +24,7 @@ class GH529Test extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $doc = $this->dm->find(get_class($doc), $doc->id);
 
         $this->assertNotNull($doc);
-        $this->assertEquals($mongoId, $doc->id);
+        $this->assertEquals($identifier, $doc->id);
     }
 
     public function testCustomIdType()

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Documents;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
@@ -13,9 +15,7 @@ class Feature
     /** @ODM\Field(type="string") */
     public $name;
 
-    /**
-     * @ODM\ReferenceOne(targetDocument="Product", inversedBy="features", cascade={"all"})
-     */
+    /** @ODM\ReferenceOne(targetDocument=Product::class, inversedBy="features", cascade={"all"}) */
     public $product;
 
     public function __construct($name)

@@ -1,18 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
-use Documents\User;
+use Doctrine\ODM\MongoDB\DocumentNotFoundException;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\Group;
 use Documents\Profile;
+use Documents\User;
+use function sort;
 
-class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class FilterTest extends BaseTest
 {
     public function setUp()
     {
         parent::setUp();
 
-        $this->ids = array();
+        $this->ids = [];
 
         $groupA = new Group('groupA');
         $groupB = new Group('groupB');
@@ -46,7 +51,7 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     {
         $this->fc->enable('testFilter');
         $testFilter = $this->fc->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\User');
+        $testFilter->setParameter('class', User::class);
         $testFilter->setParameter('field', 'username');
         $testFilter->setParameter('value', 'Tim');
     }
@@ -55,7 +60,7 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     {
         $this->fc->enable('testFilter');
         $testFilter = $this->fc->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\Group');
+        $testFilter->setParameter('class', Group::class);
         $testFilter->setParameter('field', 'name');
         $testFilter->setParameter('value', 'groupA');
     }
@@ -64,37 +69,37 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     {
         $this->fc->enable('testFilter');
         $testFilter = $this->fc->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\Profile');
+        $testFilter->setParameter('class', Profile::class);
         $testFilter->setParameter('field', 'firstname');
         $testFilter->setParameter('value', 'Something Else');
     }
 
     public function testRepositoryFind()
     {
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithFind());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithFind());
 
         $this->enableUserFilter();
         $this->dm->clear();
-        $this->assertEquals(array('Tim'), $this->getUsernamesWithFind());
+        $this->assertEquals(['Tim'], $this->getUsernamesWithFind());
 
         $this->fc->disable('testFilter');
         $this->dm->clear();
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithFind());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithFind());
     }
 
     protected function getUsernamesWithFind()
     {
-        $repository = $this->dm->getRepository('Documents\User');
+        $repository = $this->dm->getRepository(User::class);
 
         $tim = $repository->find($this->ids['tim']);
         $john = $repository->find($this->ids['john']);
 
-        $usernames = array();
+        $usernames = [];
 
-        if(isset($tim)) {
+        if (isset($tim)) {
             $usernames[] = $tim->getUsername();
         }
-        if(isset($john)) {
+        if (isset($john)) {
             $usernames[] = $john->getUsername();
         }
 
@@ -104,22 +109,22 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testRepositoryFindBy()
     {
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithFindBy());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithFindBy());
 
         $this->enableUserFilter();
         $this->dm->clear();
-        $this->assertEquals(array('Tim'), $this->getUsernamesWithFindBy());
+        $this->assertEquals(['Tim'], $this->getUsernamesWithFindBy());
 
         $this->fc->disable('testFilter');
         $this->dm->clear();
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithFindBy());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithFindBy());
     }
 
     protected function getUsernamesWithFindBy()
     {
-        $all = $this->dm->getRepository('Documents\User')->findBy(array('hits' => 10));
+        $all = $this->dm->getRepository(User::class)->findBy(['hits' => 10]);
 
-        $usernames = array();
+        $usernames = [];
         foreach ($all as $user) {
             $usernames[] = $user->getUsername();
         }
@@ -142,29 +147,29 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     protected function getJohnsUsernameWithFindOneBy()
     {
-        $john = $this->dm->getRepository('Documents\User')->findOneBy(array('id' => $this->ids['john']));
+        $john = $this->dm->getRepository(User::class)->findOneBy(['id' => $this->ids['john']]);
 
         return isset($john) ? $john->getUsername() : null;
     }
 
     public function testRepositoryFindAll()
     {
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithFindAll());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithFindAll());
 
         $this->enableUserFilter();
         $this->dm->clear();
-        $this->assertEquals(array('Tim'), $this->getUsernamesWithFindAll());
+        $this->assertEquals(['Tim'], $this->getUsernamesWithFindAll());
 
         $this->fc->disable('testFilter');
         $this->dm->clear();
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithFindAll());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithFindAll());
     }
 
     protected function getUsernamesWithFindAll()
     {
-        $all = $this->dm->getRepository('Documents\User')->findAll();
+        $all = $this->dm->getRepository(User::class)->findAll();
 
-        $usernames = array();
+        $usernames = [];
         foreach ($all as $user) {
             $usernames[] = $user->getUsername();
         }
@@ -174,26 +179,26 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testReferenceMany()
     {
-        $this->assertEquals(array('groupA', 'groupB'), $this->getGroupsByReference());
+        $this->assertEquals(['groupA', 'groupB'], $this->getGroupsByReference());
 
         $this->enableGroupFilter();
         $this->dm->clear();
-        $this->assertEquals(array('groupA'), $this->getGroupsByReference());
+        $this->assertEquals(['groupA'], $this->getGroupsByReference());
 
         $this->fc->disable('testFilter');
         $this->dm->clear();
-        $this->assertEquals(array('groupA', 'groupB'), $this->getGroupsByReference());
+        $this->assertEquals(['groupA', 'groupB'], $this->getGroupsByReference());
     }
 
     protected function getGroupsByReference()
     {
-        $tim = $this->dm->getRepository('Documents\User')->find($this->ids['tim']);
+        $tim = $this->dm->getRepository(User::class)->find($this->ids['tim']);
 
-        $groupnames = array();
+        $groupnames = [];
         foreach ($tim->getGroups() as $group) {
             try {
                 $groupnames[] = $group->getName();
-            } catch (\Doctrine\ODM\MongoDB\DocumentNotFoundException $e) {
+            } catch (DocumentNotFoundException $e) {
                //Proxy object filtered
             }
         }
@@ -216,12 +221,12 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     protected function getProfileByReference()
     {
-        $tim = $this->dm->getRepository('Documents\User')->find($this->ids['tim']);
+        $tim = $this->dm->getRepository(User::class)->find($this->ids['tim']);
 
         $profile = $tim->getProfile();
         try {
             return $profile->getFirstname();
-        } catch (\Doctrine\ODM\MongoDB\DocumentNotFoundException $e) {
+        } catch (DocumentNotFoundException $e) {
             //Proxy object filtered
             return null;
         }
@@ -229,33 +234,33 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testDocumentManagerRef()
     {
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithDocumentManager());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithDocumentManager());
 
         $this->enableUserFilter();
         $this->dm->clear();
-        $this->assertEquals(array('Tim'), $this->getUsernamesWithDocumentManager());
+        $this->assertEquals(['Tim'], $this->getUsernamesWithDocumentManager());
 
         $this->fc->disable('testFilter');
         $this->dm->clear();
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithDocumentManager());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithDocumentManager());
     }
 
     protected function getUsernamesWithDocumentManager()
     {
-        $tim = $this->dm->getReference('Documents\User', $this->ids['tim']);
-        $john = $this->dm->getReference('Documents\User', $this->ids['john']);
+        $tim = $this->dm->getReference(User::class, $this->ids['tim']);
+        $john = $this->dm->getReference(User::class, $this->ids['john']);
 
-        $usernames = array();
+        $usernames = [];
 
         try {
             $usernames[] = $tim->getUsername();
-        } catch (\Doctrine\ODM\MongoDB\DocumentNotFoundException $e) {
+        } catch (DocumentNotFoundException $e) {
             //Proxy object filtered
         }
 
         try {
             $usernames[] = $john->getUsername();
-        } catch (\Doctrine\ODM\MongoDB\DocumentNotFoundException $e) {
+        } catch (DocumentNotFoundException $e) {
             //Proxy object filtered
         }
 
@@ -265,24 +270,24 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
 
     public function testQuery()
     {
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithQuery());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithQuery());
 
         $this->enableUserFilter();
         $this->dm->clear();
-        $this->assertEquals(array('Tim'), $this->getUsernamesWithQuery());
+        $this->assertEquals(['Tim'], $this->getUsernamesWithQuery());
 
         $this->fc->disable('testFilter');
         $this->dm->clear();
-        $this->assertEquals(array('John', 'Tim'), $this->getUsernamesWithQuery());
+        $this->assertEquals(['John', 'Tim'], $this->getUsernamesWithQuery());
     }
 
     protected function getUsernamesWithQuery()
     {
-        $qb = $this->dm->createQueryBuilder('Documents\User');
+        $qb = $this->dm->createQueryBuilder(User::class);
         $query = $qb->getQuery();
         $all = $query->execute();
 
-        $usernames = array();
+        $usernames = [];
         foreach ($all as $user) {
             $usernames[] = $user->getUsername();
         }
@@ -294,13 +299,13 @@ class FilterTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     {
         $this->fc->enable('testFilter');
         $testFilter = $this->fc->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\User');
+        $testFilter->setParameter('class', User::class);
         $testFilter->setParameter('field', 'username');
         $testFilter->setParameter('value', 'Tim');
 
         $this->fc->enable('testFilter2');
         $testFilter2 = $this->fc->getFilter('testFilter2');
-        $testFilter2->setParameter('class', 'Documents\User');
+        $testFilter2->setParameter('class', User::class);
         $testFilter2->setParameter('field', 'username');
         $testFilter2->setParameter('value', 'John');
 

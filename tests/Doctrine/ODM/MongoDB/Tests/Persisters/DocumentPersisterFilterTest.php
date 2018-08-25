@@ -1,37 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Persisters;
 
 use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Documents\BlogPost;
+use Documents\Comment;
+use Documents\User;
 
 class DocumentPersisterFilterTest extends BaseTest
 {
     public function testAddFilterToPreparedQuery()
     {
-        $persister = $this->uow->getDocumentPersister('Documents\User');
+        $persister = $this->uow->getDocumentPersister(User::class);
         $filterCollection = $this->dm->getFilterCollection();
 
         $filterCollection->enable('testFilter');
         $testFilter = $filterCollection->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\User');
+        $testFilter->setParameter('class', User::class);
         $testFilter->setParameter('field', 'username');
         $testFilter->setParameter('value', 'Tim');
 
-        $preparedQuery = array('username' => 'Toby');
+        $preparedQuery = ['username' => 'Toby'];
 
-        $expectedCriteria = array('$and' => array(
-            array('username' => 'Toby'),
-            array('username' => 'Tim'),
-        ));
+        $expectedCriteria = [
+        '$and' => [
+            ['username' => 'Toby'],
+            ['username' => 'Tim'],
+        ],
+        ];
 
         $this->assertSame($expectedCriteria, $persister->addFilterToPreparedQuery($preparedQuery));
     }
 
     public function testFilterCrieriaShouldAndWithMappingCriteriaOwningSide()
     {
-        $blogPost = new \Documents\BlogPost('Roger');
-        $blogPost->addComment(new \Documents\Comment('comment by normal user', new \DateTime(), false));
-        $blogPost->addComment(new \Documents\Comment('comment by admin', new \DateTime(), true));
+        $blogPost = new BlogPost('Roger');
+        $blogPost->addComment(new Comment('comment by normal user', new \DateTime(), false));
+        $blogPost->addComment(new Comment('comment by admin', new \DateTime(), true));
 
         $this->dm->persist($blogPost);
         $this->dm->flush();
@@ -41,11 +48,11 @@ class DocumentPersisterFilterTest extends BaseTest
 
         $filterCollection->enable('testFilter');
         $testFilter = $filterCollection->getFilter('testFilter');
-        $testFilter->setParameter('class', 'Documents\Comment');
+        $testFilter->setParameter('class', Comment::class);
         $testFilter->setParameter('field', 'isByAdmin');
         $testFilter->setParameter('value', false);
 
-        $blogPost = $this->dm->getRepository('Documents\BlogPost')->find($blogPost->id);
+        $blogPost = $this->dm->getRepository(BlogPost::class)->find($blogPost->id);
 
         // Admin comments should be removed by the filter
         $this->assertCount(1, $blogPost->comments);

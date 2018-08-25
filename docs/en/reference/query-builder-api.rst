@@ -83,9 +83,9 @@ with the ``find()``, ``update()`` (deprecated), ``updateOne()``,
     <?php
 
     $qb = $dm->createQueryBuilder();
-    
+
     // ...
-    
+
     $qb->find('User');
 
 Executing Queries
@@ -232,7 +232,7 @@ The above would give you an ``ArrayCollection`` of all the distinct user ages!
 Refreshing Documents
 ~~~~~~~~~~~~~~~~~~~~
 
-When a query (e.g. geoNear, find) returns one or more hydrated documents whose
+When a query (e.g. find) returns one or more hydrated documents whose
 identifiers are already in the identity map, ODM returns the managed document
 instances for those results. In this case, a managed document's data may differ
 from whatever was just returned by the database query.
@@ -371,7 +371,7 @@ object:
         ->reduce("function(k, vals) {
             var sum = 0;
             for (var i in vals) {
-                sum += vals[i]; 
+                sum += vals[i];
             }
             return sum;
         }");
@@ -571,7 +571,7 @@ Read more about the
 in the Mongo docs.
 
 .. code-block:: php
-    
+
     <?php
 
     $qb = $dm->createQueryBuilder('Transaction')
@@ -589,8 +589,8 @@ Query for users who have subscribed or are in a trial.
     $qb = $dm->createQueryBuilder('User');
     $qb->addOr($qb->expr()->field('subscriber')->equals(true));
     $qb->addOr($qb->expr()->field('inTrial')->equals(true));
-    
-Read more about the 
+
+Read more about the
 `$or operator <https://docs.mongodb.com/manual/reference/operator/query/or/>`_ in the Mongo docs.
 
 The ``references()`` method may be used to query the owning side of a
@@ -680,7 +680,6 @@ method:
         ->language('it')
         ->text('parole che stai cercando');
 
-
 Update Queries
 ~~~~~~~~~~~~~~
 
@@ -698,9 +697,7 @@ available to you that make it easy to update documents in Mongo:
 * ``inc($name, $value)``
 * ``unsetField($field)``
 * ``push($field, $value)``
-* ``pushAll($field, array $valueArray)``
 * ``addToSet($field, $value)``
-* ``addManyToSet($field, array $values)``
 * ``popFirst($field)``
 * ``popLast($field)``
 * ``pull($field, $value)``
@@ -722,10 +719,6 @@ In ODM the distinction is done by explicitly calling ``updateMany()`` method of 
         ->field('username')->equals('sgoettschkes')
         ->getQuery()
         ->execute();
-
-.. note::
-    ``updateMany()`` and  ``updateOne()`` methods were introduced in version 1.2. If you're
-    using one of previous version you need to use ``update()`` combined with ``multiple(true)``.
 
 Modifier Operations
 -------------------
@@ -836,16 +829,12 @@ Append new tags to the tags array:
 
     <?php
 
-    $dm->createQueryBuilder('Article')
-        ->updateOne()
-        ->field('tags')->pushAll(array('tag6', 'tag7'))
+    $qb = $dm->createQueryBuilder('Article');
+    $qb->updateOne()
+        ->field('tags')->push($qb->expr()->each(array('tag6', 'tag7')))
         ->field('id')->equals('theid')
         ->getQuery()
         ->execute();
-
-Read more about the
-`$pushAll modifier <https://docs.mongodb.com/manual/reference/operator/update/pushAll/>`_
-in the Mongo docs.
 
 Add value to array only if its not in the array already:
 
@@ -871,16 +860,12 @@ already:
 
     <?php
 
-    $dm->createQueryBuilder('Article')
-        ->updateOne()
-        ->field('tags')->addManyToSet(array('tag6', 'tag7'))
+    $qb = $dm->createQueryBuilder('Article');
+    $qb->updateOne()
+        ->field('tags')->addToSet($qb->expr()->each(array('tag6', 'tag7')))
         ->field('id')->equals('theid')
         ->getQuery()
         ->execute();
-
-Read more about the
-`$addManyToSet modifier <http://www.mongodb.org/display/DOCS/Updating#Updating-%24addManyToSet>`_
-in the Mongo docs.
 
 Remove first element in an array:
 

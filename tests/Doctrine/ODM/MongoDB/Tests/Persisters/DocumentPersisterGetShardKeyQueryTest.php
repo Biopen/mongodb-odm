@@ -1,10 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Persisters;
 
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 use Doctrine\ODM\MongoDB\Persisters\DocumentPersister;
 use Doctrine\ODM\MongoDB\Tests\BaseTest;
+use Documents\User;
+use MongoDB\BSON\Binary;
+use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
+use function get_class;
 
 class DocumentPersisterGetShardKeyQueryTest extends BaseTest
 {
@@ -23,7 +30,7 @@ class DocumentPersisterGetShardKeyQueryTest extends BaseTest
         $method->setAccessible(true);
 
         $this->assertSame(
-            array('int' => $o->int, 'string' => $o->string, 'bool' => $o->bool, 'float' => $o->float),
+            ['int' => $o->int, 'string' => $o->string, 'bool' => $o->bool, 'float' => $o->float],
             $method->invoke($persister, $o)
         );
     }
@@ -42,23 +49,25 @@ class DocumentPersisterGetShardKeyQueryTest extends BaseTest
         $method->setAccessible(true);
         $shardKeyQuery = $method->invoke($persister, $o);
 
-        $this->assertInstanceOf('MongoId', $shardKeyQuery['oid']);
-        $this->assertSame($o->oid, $shardKeyQuery['oid']->{'$id'});
+        $this->assertInstanceOf(ObjectId::class, $shardKeyQuery['oid']);
+        $this->assertSame($o->oid, (string) $shardKeyQuery['oid']);
 
-        $this->assertInstanceOf('MongoBinData', $shardKeyQuery['bin']);
-        $this->assertSame($o->bin, $shardKeyQuery['bin']->bin);
+        $this->assertInstanceOf(Binary::class, $shardKeyQuery['bin']);
+        $this->assertSame($o->bin, $shardKeyQuery['bin']->getData());
 
-        $this->assertInstanceOf('MongoDate', $shardKeyQuery['date']);
-        $this->assertSame($o->date->getTimestamp(), $shardKeyQuery['date']->sec);
+        $this->assertInstanceOf(UTCDateTime::class, $shardKeyQuery['date']);
+        $this->assertEquals($o->date->getTimestamp(), $shardKeyQuery['date']->toDateTime()->getTimestamp());
 
-        $microseconds = (int)floor(((int)$o->date->format('u')) / 1000) * 1000;
-        $this->assertSame($microseconds, $shardKeyQuery['date']->usec);
+        $this->assertSame(
+            (int) $o->date->format('v'),
+            (int) $shardKeyQuery['date']->toDateTime()->format('v')
+        );
     }
 
     public function testShardById()
     {
         $o = new ShardedById();
-        $o->identifier = new \MongoId();
+        $o->identifier = new ObjectId();
 
         /** @var DocumentPersister $persister */
         $persister = $this->uow->getDocumentPersister(get_class($o));
@@ -67,7 +76,27 @@ class DocumentPersisterGetShardKeyQueryTest extends BaseTest
         $method->setAccessible(true);
         $shardKeyQuery = $method->invoke($persister, $o);
 
-        $this->assertSame(array('_id' => $o->identifier), $shardKeyQuery);
+        $this->assertSame(['_id' => $o->identifier], $shardKeyQuery);
+    }
+
+    public function testShardByReference()
+    {
+        $o = new ShardedByReferenceOne();
+
+        $userId = new ObjectId();
+        $o->reference = new User();
+        $o->reference->setId($userId);
+
+        $this->dm->persist($o->reference);
+
+        /** @var DocumentPersister $persister */
+        $persister = $this->uow->getDocumentPersister(get_class($o));
+
+        $method = new \ReflectionMethod($persister, 'getShardKeyQuery');
+        $method->setAccessible(true);
+        $shardKeyQuery = $method->invoke($persister, $o);
+
+        $this->assertSame(['reference.$id' => $userId], $shardKeyQuery);
     }
 }
 
@@ -120,4 +149,17 @@ class ShardedById
 {
     /** @ODM\Id */
     public $identifier;
+}
+
+/**
+ * @ODM\Document
+ * @ODM\ShardKey(keys={"reference"="asc"})
+ */
+class ShardedByReferenceOne
+{
+    /** @ODM\Id */
+    public $id;
+
+    /** @ODM\ReferenceOne(targetDocument=User::class) */
+    public $reference;
 }

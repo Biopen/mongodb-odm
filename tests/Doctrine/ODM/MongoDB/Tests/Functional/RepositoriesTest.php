@@ -1,14 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Doctrine\ODM\MongoDB\Tests\Functional;
 
 use Doctrine\Common\Collections\Criteria;
-use Documents\Account;
-use Documents\Address;
-use Documents\Phonenumber;
+use Doctrine\ODM\MongoDB\Tests\BaseTest;
 use Documents\User;
 
-class RepositoriesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
+class RepositoriesTest extends BaseTest
 {
     public function setUp()
     {
@@ -20,13 +20,7 @@ class RepositoriesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
         $this->dm->persist($this->user);
         $this->dm->flush();
 
-        $this->repository = $this->dm->getRepository('Documents\User');
-    }
-
-    public function testMagicMethods()
-    {
-        $user = $this->repository->findOneByUsername('w00ting');
-        $this->assertEquals('w00ting', $user->getUsername());
+        $this->repository = $this->dm->getRepository(User::class);
     }
 
     public function testFindAll()
@@ -40,10 +34,10 @@ class RepositoriesTest extends \Doctrine\ODM\MongoDB\Tests\BaseTest
     public function testFind()
     {
         $user2 = $this->repository->find($this->user->getId());
-        $this->assertTrue($this->user === $user2);
+        $this->assertSame($this->user, $user2);
 
-        $user3 = $this->repository->findOneBy(array('username' => 'w00ting'));
-        $this->assertTrue($user2 === $user3);
+        $user3 = $this->repository->findOneBy(['username' => 'w00ting']);
+        $this->assertSame($user2, $user3);
     }
 
     public function testCriteria()
